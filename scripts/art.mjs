@@ -107,9 +107,9 @@ export function skyArt({period, weather, hour, dawn, dusk, phase, showTears = tr
     <g clip-path="url(#ra-bowl)" fill="none" stroke="${frame.light}" stroke-width=".8" opacity=".22">${swirls}</g>
     <g fill="none" stroke="${frame.light}" stroke-width=".7" opacity=".6">${ticks}</g>
     <path d="M40 0H280A124 124 0 0 1 40 0Z" fill="url(#ra-sky-fill)" stroke="url(#ra-gold)" stroke-width="3"/>
-    <g clip-path="url(#ra-inner)"><g fill="#e4e3f0" opacity="${night ? .85 : .12}">${starPoints}</g>${sun}${tears}${planetArt(planets)}${clouds}${precipitation}
+    <g clip-path="url(#ra-inner)"><g fill="#e4e3f0" opacity="${night ? .85 : .12}">${starPoints}</g>${sun}${tears}${clouds}${precipitation}
     ${weather==='storm'?'<path class="ra-lightning" d="m245 31-12 20h10l-12 19 25-26h-12l8-13" fill="#eef0ff" opacity=".75"/>':''}
     <path d="M33 99Q71 82 108 97T196 96T290 90V130H33Z" fill="#11182a" opacity=".55"/>
-    </g><path d="m160 105 3 6 7 2-7 2-3 7-3-7-7-2 7-2Z" fill="${frame.light}" stroke="${frame.mid}" stroke-width=".7"/>
+    </g><path d="m160 105 3 6 7 2-7 2-3 7-3-7-7-2 7-2Z" fill="${frame.light}" stroke="${frame.mid}" stroke-width=".7"/>${planetArt(planets)}
     </svg>`;
 }

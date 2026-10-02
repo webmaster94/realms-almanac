@@ -26,6 +26,18 @@ The active GM advances the clock while the game is unpaused and outside combat. 
 
 Click the weather to choose a condition and temperature or generate weather. Optional daily generation follows the chosen climate. Scene weather and darkness synchronization are separate opt-in settings. Time and weather settings apply to the world; display preferences apply to each client.
 
+## Realmspace atlas
+
+The planet-ring button opens a 3D star map centered on Amaunator. Click a world or its name to approach it, drag to orbit, and use the wheel to zoom. Terrain is sculpted and illumination faces the central sun. Survey Light can reveal terrain on the night side without changing game lighting.
+
+Toril uses an attributed GIS-derived surface, elevation and geography. The World Map tab supports panning, zooming, settlement/region search and GM party placement. Detailed vector shorelines, lakes, forests and rivers appear at close zooms. The dataset includes 1,024 named settlements.
+
+The first click on Regional Map opens a Scene UUID form with a scene-browser button. It never chooses a campaign scene automatically. Link a world scene and optionally follow an existing token as the party marker. A regional atlas marker can also be placed without moving any scene token. Open Scene views the linked scene for the current user; it does not activate it for everyone.
+
+World/globe coordinates and regional scene coordinates are separate. The world marker is an editable geographic anchor; the regional view follows the linked token's actual position. The module does not silently pretend an arbitrary scene image is georeferenced.
+
+The globe's starting orbital alignments remain approximate. Diagram distances and sizes are compressed; terrain relief is exaggerated for inspection. Regional scene images stay in the user's installation and are not copied into releases.
+
 ## The sky
 
 Selûne uses a 30-day, 10-hour, 30-minute cycle, full at midnight on 1 Hammer 1372 DR. The moon disc remains a phase indicator even when it is below the horizon.
@@ -42,8 +54,8 @@ Version 0.2 replaces the former interface-only implementation. A one-time import
 
 ## Development
 
-No build step or runtime package dependencies. `npm test` checks the astronomy, visibility and clock logic. `npm run check` checks every JavaScript module. Live verification also covers journal saves, edits, ownership, Harptos holidays and native windows.
+The released module includes its renderer and assets. Development uses pinned Three.js and esbuild versions; `npm run build:vendor` rebuilds the bundled renderer. `tools/build-toril.py` renders the atlas from Toril GIS snapshot files in `qa/gis` and requires Pillow, NumPy and Shapely. `npm test` checks the astronomy, visibility and clock logic. `npm run check` checks every JavaScript module. Live verification also covers journal saves, edits, ownership, Harptos holidays and native windows.
 
-Package `module.json`, `scripts`, `styles` and `LICENSE` at the ZIP root. Publish `module.json` and `module.zip` with each version tag.
+Package `module.json`, `scripts`, `styles`, `assets` and `LICENSE` at the ZIP root. Publish `module.json` and `module.zip` with each version tag.
 
-All included code and vector artwork are original and MIT licensed. No protected calendar or adventure source or art is included. Forgotten Realms names and lore belong to their respective owners.
+Original code and procedural planetary artwork are MIT licensed. Three.js retains its MIT notice. Derived Toril map assets have separate noncommercial fan-content terms in `assets/toril/NOTICE.md`. No protected calendar/adventure code or the user's regional map is redistributed. Forgotten Realms names and lore belong to their respective owners.

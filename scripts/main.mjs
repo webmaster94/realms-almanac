@@ -5,6 +5,7 @@ import {AlmanacSettings,WeatherEditor} from './settings.mjs';
 import {AlmanacMonthView,openDateEditor} from './calendar.mjs';
 import {planetStates,elapsedRealmsDays} from './planets.mjs';
 import {SkyWindow} from './sky-window.mjs';
+import {registerAtlasSettings} from './atlas-state.mjs';
 
 const get = key => game.settings.get(ID, key);
 const notifyError = error => { console.error(`${ID} |`, error); ui.notifications.error(error.message ?? String(error)); };
@@ -53,7 +54,7 @@ export class RealmsAlmanac {
     this.root.id=ID;
     this.root.setAttribute("aria-label", "Realms Almanac");
     document.body.append(this.root);
-    this.root.addEventListener("click", e=>{const action=e.target.closest("[data-action]")?.dataset.action; if(action) this.action(action).catch(notifyError);});
+    this.root.addEventListener("click", e=>{const target=e.target.closest("[data-action]");if(target)this.action(target.dataset.action,target.dataset.body).catch(notifyError);});
     this.root.addEventListener("change", e=>{if(e.target.name==="interval") game.settings.set(ID,"interval",e.target.value).catch(notifyError);});
     for(const name of ["updateWorldTime","updateCombat","createCombat","deleteCombat","combatStart","combatEnd","canvasReady","updateScene"]) {
       const id=Hooks.on(name,()=>this.refresh()); this.hooks.push([name,id]);
@@ -87,7 +88,7 @@ export class RealmsAlmanac {
     const dateTitle=`${w.date.label}, ${w.date.year}${w.realms?' DR':''}. ${w.date.motif[1]}${w.date.holiday?'. Festival day':''}`;
     const gm=game.user.isGM;
     this.root.innerHTML=`<div class="ra-rail">
-      <div class="ra-controls ra-left">${gm?button("back",`Back 1 ${interval}`,fa("backward-step"),this.advancing?'disabled':''):''}${button("settings","Almanac Settings",fa("gear"))}${button("reference","Calendar of Harptos",fa("book-open"))}${button("events","Open Calendar",fa("calendar-days"))+(gm?button("pause",config().running?'Pause Clock':'Resume Clock',fa(config().running?'pause':'play')):'')}</div>
+      <div class="ra-controls ra-left">${gm?button("back",`Back 1 ${interval}`,fa("backward-step"),this.advancing?'disabled':''):''}${button("settings","Almanac Settings",fa("gear"))}${button("atlas","Open Star Map",fa("planet-ringed"))}${button("events","Open Calendar",fa("calendar-days"))+(gm?button("pause",config().running?'Pause Clock':'Resume Clock',fa(config().running?'pause':'play')):'')}</div>
       ${button("date",`${dateTitle} · ${gm?'Set Date and Time':'View Calendar'}`,`<span class="ra-time">${esc(w.time)}</span>`, 'class="ra-clock"')}
       <div class="ra-controls ra-right">${button("collapse",collapsed?"Expand Celestial Dial":"Collapse Celestial Dial",fa(collapsed?"chevron-down":"chevron-up"),`aria-expanded="${!collapsed}"`)}${gm?`<select name="interval" aria-label="Advance Interval" title="Advance Interval">${['minute','hour','day'].map(s=>`<option value="${s}" ${s===interval?'selected':''}>1 ${s[0].toUpperCase()+s.slice(1)}</option>`).join('')}</select>${button("forward",`Forward 1 ${interval}`,fa("forward-step"),this.advancing?'disabled':'')}`:''}</div>
       </div>
@@ -106,11 +107,12 @@ export class RealmsAlmanac {
     try {await game.time.advance(direction*intervalSeconds(get("interval"),game.time.calendar));}
     finally {this.advancing=false;this.render();}
   }
-  async action(action) {
+  async action(action,body) {
     if(action==='settings') return this.settings.render(true);
     if(action==='reference') return this.reference.render(true);
     if(action==='events') {this.calendarApp??=new AlmanacMonthView();return this.calendarApp.render(true);}
     if(action==='sky') {this.skyApp??=new SkyWindow(readWorld);return this.skyApp.render(true);}
+    if(action==='atlas') {const {AtlasWindow}=await import('./atlas-window.mjs');this.atlasApp??=new AtlasWindow(readWorld);if(!this.atlasApp.element?.isConnected)await this.atlasApp.render(true);else this.atlasApp.bringToFront();if(body)await this.atlasApp.focus(body);return;}
     if(action==='collapse') return game.settings.set(ID,'collapsed',!get('collapsed'));
     if(!game.user.isGM) {if(action==='date') return this.action('events');return;}
     if(action==='forward'||action==='back') return this.advance(action==='forward'?1:-1);
@@ -124,6 +126,7 @@ export class RealmsAlmanac {
     this.root?.remove();
     this.calendarApp?.close();
     this.skyApp?.close();
+    this.atlasApp?.close();
     this.engine?.stop();
     document.body.classList.remove('ra-replace-bars');
   }
@@ -131,6 +134,7 @@ export class RealmsAlmanac {
 
 export function registerSettings() {
   registerEngineSettings();
+  registerAtlasSettings();
   const settings={enabled:[Boolean,true], width:[Number,560], top:[Number,0], clock24:[Boolean,false],hideCombat:[Boolean,true],showTears:[Boolean,true],showPlanets:[Boolean,true],animate:[Boolean,true],collapsed:[Boolean,false],interval:[String,'hour'],moonOffset:[Number,0]};
   for(const [key,[type,value]] of Object.entries(settings)) {
     if(game.settings.settings.has(`${ID}.${key}`)) continue;

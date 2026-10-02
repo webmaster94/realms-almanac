@@ -30,12 +30,16 @@ export function planetStates({days,hour,dawn=6,dusk=18,weather='clear',angles={}
     const rare=p.id==='garden'?(dark>.95&&cover===1&&altitude>.5?.4:0):1;
     const opacity=dark*cover*horizon*glare*rare*(.4+.6*lit);
     const reason=age>=12?'Below Horizon':!dark?'Daylight':!cover?'Obscured':glare<.1?'Near the Sun':p.id==='garden'&&!rare?'Too Faint':opacity<.05?'Low on Horizon':'Visible';
-    return {...p,angle,elongation,lit,opacity,reason,rise,set:mod(rise+12,24),direction:age<6?'Eastern Sky':'Western Sky'};
+    return {...p,angle,elongation,lit,opacity,reason,rise,set:mod(rise+12,24),skyProgress:age/12,direction:age<6?'Eastern Sky':'Western Sky'};
   });
 }
 export function planetArt(planets=[]) {
-  return `<g class="ra-planets">${planets.filter(p=>p.opacity>.05).map(p=>{
-    const [x,y]=p.slot,r=p.id==='garden'?1.6:2.6;
-    return `<g class="ra-planet" data-planet="${p.id}" role="img" aria-label="${esc(p.name)}, ${p.direction}" opacity="${p.opacity.toFixed(3)}"><title>${esc(p.name)} · ${p.direction} · Approximate visibility</title><circle cx="${x}" cy="${y}" r="${r}" fill="${p.color}"/><circle cx="${x-.7}" cy="${y-.6}" r="${r*.45}" fill="#fff5db" opacity=".6"/>${p.id==='glyth'?`<ellipse cx="${x}" cy="${y}" rx="4.5" ry="1.5" fill="none" stroke="${p.color}" stroke-width=".8" transform="rotate(-20 ${x} ${y})"/>`:''}</g>`;
+  return `<g class="ra-planets"><text x="24" y="16" class="ra-horizon-label">E</text><text x="291" y="16" class="ra-horizon-label">W</text>${planets.filter(p=>p.reason==='Visible').map(p=>{
+    const {x,y}=ringPosition(p.skyProgress),r=5.4;
+    return `<g class="ra-planet" data-action="atlas" data-body="${p.id}" data-planet="${p.id}" role="img" aria-label="${esc(p.name)}, ${p.direction}"><title>${esc(p.name)} · ${p.direction} · Open Star Map</title><circle cx="${x}" cy="${y}" r="9" fill="#080d1b" fill-opacity=".9" stroke="${p.color}" stroke-opacity=".55" stroke-width=".7"/><circle cx="${x}" cy="${y}" r="${r}" fill="${p.color}"/><circle cx="${x-1.2}" cy="${y-1.1}" r="2.5" fill="#fff5db" opacity=".5"/>${p.id==='glyth'?`<ellipse cx="${x}" cy="${y}" rx="8" ry="2.5" fill="none" stroke="${p.color}" stroke-width="1.2" transform="rotate(-20 ${x} ${y})"/>`:''}</g>`;
   }).join('')}</g>`;
+}
+export function ringPosition(progress) {
+  const edge=Math.asin(30/137),angle=Math.PI-edge-Math.max(0,Math.min(1,progress))*(Math.PI-2*edge);
+  return {x:160+Math.cos(angle)*137,y:-30+Math.sin(angle)*137};
 }

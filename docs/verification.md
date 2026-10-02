@@ -15,3 +15,13 @@ Checked 2 October 2026, through the standalone 0.2 release.
 - The lunar labels sit inside the dial, the Tears have textured rock silhouettes, and the frame follows the active month palette.
 
 Sky visibility remains approximate. The orbital model uses published periods and distances with configurable initial angles; it does not claim a canonical dated planetary alignment or predict eclipses.
+
+## Atlas 0.3 verification
+
+- Twenty-three automated tests cover the existing calendar plus ring placement, globe/map coordinate agreement, orbital angles, unconfigured regional links and token-to-map positions.
+- The 3D system builds ten bodies. Toril uses GIS-derived relief; atmospheric meshes do not cast opaque shadows over the surface. The inspection view was checked with solar lighting and ring shadows.
+- The world map loads 1,024 settlement labels and 3,886 vector features. Close zooms render vector shorelines, forests, lakes and rivers over relief.
+- First use of Regional Map opens the Scene UUID form. The scene browser selected a temporary local scene and automatically offered its Group token.
+- The linked marker rendered at the token center. Moving it in the atlas updated the temporary token to the expected coordinates, without changing world time or the active scene.
+- Globe party placement was checked. Test settings were restored and the temporary scene was deleted.
+- Closing the atlas disposes its renderers and removes its canvases. Toril map assets carry their source attribution and separate fan-content terms; the user's regional image is not bundled.

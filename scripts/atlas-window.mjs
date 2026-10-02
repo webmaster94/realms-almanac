@@ -1,0 +1,90 @@
+import {ID,escapeHTML as esc} from './model.mjs';
+import {PLANETS} from './planets.mjs';
+import {AtlasRenderer} from './atlas-renderer.mjs';
+import {AtlasMap,loadAtlasData} from './atlas-map.mjs';
+import {RegionLinkDialog} from './atlas-link.mjs';
+import {atlasState,resolveRegion,mapUV,setPartyPosition,saveAtlas,partyLabel} from './atlas-state.mjs';
+
+const bodies=[{id:'amaunator',name:'Amaunator',color:'#f4bd5c'},...PLANETS.slice(0,2),{id:'toril',name:'Toril',color:'#6aa9cf'},...PLANETS.slice(2),{id:'selune',name:'Selûne',color:'#c7d2de'}];
+const descriptions={
+ amaunator:'The solar heart of Realmspace. Its light falls across the worlds and their rings.',
+ anadia:'Canyon-cut amber lands, with green regions near the poles.',coliar:'A vast cloud world, with islands suspended in its atmosphere.',
+ toril:'Oceans and continents beneath a thin atmosphere. Open the world map to explore settlements and place the party.',
+ karpri:'Deep sapphire oceans, white polar caps and an equatorial belt of kelp.',chandos:'Brown-green islands scattered across an ocean world.',
+ glyth:'A smoke-colored world encircled by broad rings.',garden:'A living tree holds a loose collection of asteroids together with its roots.',
+ hcatha:'A flat water world crowned by the Spindle, which points toward the sun.',selune:'Toril’s cratered moon, followed across the sky by the Tears.'
+};
+let stylesReady;
+function ensureStyles(){return stylesReady??=new Promise((resolve,reject)=>{const link=document.createElement('link');link.rel='stylesheet';link.href='modules/realms-almanac/styles/atlas.css';link.onload=resolve;link.onerror=()=>reject(new Error('Atlas styles could not be loaded.'));document.head.append(link);});}
+export class AtlasWindow extends foundry.applications.api.ApplicationV2 {
+  static DEFAULT_OPTIONS={id:'ra-star-map',classes:['ra-atlas'],window:{title:'Realmspace Atlas',icon:'fa-solid fa-planet-ringed',resizable:true},position:{width:1160,height:720}};
+  static TABS={atlas:{initial:'system',tabs:[{id:'system',label:'Star Map'},{id:'world',label:'World Map'},{id:'region',label:'Regional Map'}]}};
+  constructor(read){super();this.read=read;this.hooks=[];this.activeBody=null;this.alive=false;}
+  async _renderHTML(){const current=this.tabGroups.atlas;return `<nav class="tabs ra-atlas-nav" data-group="atlas">${[['system','Star Map','solar-system'],['world','World Map','globe'],['region','Regional Map','map']].map(([id,label,i])=>`<a data-action="tab" data-group="atlas" data-tab="${id}" class="${current===id?'active':''}"><i class="fa-solid fa-${i}"></i> ${label}</a>`).join('')}<span class="ra-atlas-date"></span></nav>
+    <div class="ra-atlas-tools"><button type="button" data-tool="home"><i class="fa-solid fa-expand"></i> Overview</button><button type="button" data-tool="find"><i class="fa-solid fa-location-crosshairs"></i> Find Party</button>${game.user.isGM?'<button type="button" data-tool="place" aria-pressed="false"><i class="fa-solid fa-map-pin"></i> Set Party Position</button><button type="button" data-tool="link"><i class="fa-solid fa-link"></i> Link Regional Map</button>':''}<button type="button" data-tool="scene" hidden><i class="fa-solid fa-map"></i> Open Scene</button><button type="button" data-tool="survey" aria-pressed="false" title="Reveal terrain on the night side">Survey Light</button><span class="ra-atlas-status"></span></div>
+    <section class="tab ra-system-tab ${current==='system'?'active':''}" data-group="atlas" data-tab="system"><aside class="ra-body-sidebar"><div class="ra-body-heading"><small>REALMSPACE</small><h2 data-body-title>The Solar System</h2><p data-body-description>Select a world to approach it. Drag to orbit and use the wheel to zoom.</p></div><div class="ra-body-list">${bodies.map(b=>`<button type="button" data-focus="${b.id}"><span style="--body-color:${b.color}" class="ra-body-dot"></span>${b.name}<i class="fa-solid fa-chevron-right"></i></button>`).join('')}</div><dl class="ra-body-facts"></dl><p class="ra-atlas-scale">Distances are compressed for navigation. Relief is exaggerated.</p></aside><div class="ra-system-stage"><div class="ra-atlas-loading">Charting Realmspace…</div></div></section>
+    <section class="tab ra-world-tab ${current==='world'?'active':''}" data-group="atlas" data-tab="world"><div class="ra-map-search"><input type="search" placeholder="Find a settlement or region" aria-label="Find a Place on Toril"><div class="ra-place-results"></div></div><div class="ra-world-stage ra-map-stage"></div></section>
+    <section class="tab ra-region-tab ${current==='region'?'active':''}" data-group="atlas" data-tab="region"><div class="ra-region-caption"></div><div class="ra-region-stage ra-map-stage"></div></section>
+    <footer class="ra-atlas-footer"><span>Drag to move · Wheel to zoom · Click a world to explore</span><button type="button" data-tool="credits">Map Sources</button></footer>`;}
+  _replaceHTML(html,content){this.disposeViews();content.innerHTML=html;}
+  async _onRender(context,options){super._onRender(context,options);const generation=this.generation;await ensureStyles();if(generation!==this.generation||!this.element?.isConnected)return;this.alive=true;
+    this.element.querySelectorAll('[data-tool]').forEach(b=>b.addEventListener('click',()=>this.tool(b.dataset.tool).catch(e=>ui.notifications.error(e.message))));
+    this.element.querySelectorAll('[data-focus]').forEach(b=>b.addEventListener('click',()=>this.focus(b.dataset.focus).catch(e=>ui.notifications.error(e.message))));
+    const host=this.element.querySelector('.ra-system-stage');
+    try{this.space=new AtlasRenderer(host,this.read,{onSelect:id=>this.focus(id).catch(e=>ui.notifications.error(e.message)),onPosition:p=>this.placeWorld(p).catch(e=>ui.notifications.error(e.message))});this.space.ready.then(()=>{host.querySelector('.ra-atlas-loading')?.remove();if(this.pendingBody){const id=this.pendingBody;this.pendingBody=null;this.focus(id);}}).catch(e=>this.showError(host,e));}catch(e){this.showError(host,e);}
+    this.element.querySelector('.ra-map-search input').addEventListener('input',e=>this.search(e.target.value));
+    if(!this.hooks.length){
+      this.hooks.push(['updateWorldTime',Hooks.on('updateWorldTime',()=>{const w=this.read(),key=`${w.date.year}/${w.date.label}/${w.time}`;if(key!==this.timeKey){this.timeKey=key;this.space?.update();this.updateDate();}})]);
+      this.hooks.push(['updateToken',Hooks.on('updateToken',t=>{if(t.uuid===atlasState().regional.tokenUuid)this.refreshState();})]);
+      this.hooks.push(['updateScene',Hooks.on('updateScene',s=>{if(s.uuid===atlasState().regional.sceneUuid)this.refreshState();})]);
+    }
+    this.updateDate();await this.activateView(this.tabGroups.atlas);
+  }
+  showError(host,error){if(!this.alive)return;console.error(ID,error);host.querySelector('.ra-atlas-loading')?.remove();const p=document.createElement('p');p.className='ra-atlas-error';p.textContent=error.message;host.append(p);}
+  changeTab(tab,group,options={}){
+    if(!this.alive)return;
+    if(tab==='region'&&!atlasState().regional.sceneUuid){if(game.user.isGM)new RegionLinkDialog(()=>this.changeTab('region','atlas',{force:true})).render(true);else ui.notifications.info('The GM has not linked a regional map yet.');return;}
+    super.changeTab(tab,group,options);return this.activateView(tab).catch(e=>ui.notifications.error(e.message));
+  }
+  updateDate(){if(!this.element)return;const w=this.read();this.element.querySelector('.ra-atlas-date').textContent=`${w.date.label}, ${w.date.year} · ${w.time}`;}
+  async activateView(tab){if(!this.alive)return;const generation=this.generation;this.setPlacement(false);if(this.space)this.space.visible=tab==='system';this.element.querySelector('[data-tool="scene"]').hidden=tab!=='region';this.element.querySelector('[data-tool="survey"]').hidden=tab!=='system';this.element.querySelector('.ra-atlas-footer>span').textContent=tab==='system'?'Drag to orbit · Wheel to zoom · Click a world to explore':'Drag to pan · Wheel to zoom · Set Party Position to place a marker';
+    if(tab==='system'){this.space?.resize();return;}
+    if(tab==='world'){
+      if(!this.worldMap){this.worldMap=new AtlasMap(this.element.querySelector('.ra-world-stage'),{world:true,onPlace:p=>this.placeWorld(p).catch(e=>ui.notifications.error(e.message))});await this.worldMap.load(atlasState().mapSource);}
+      if(!this.alive||generation!==this.generation)return;
+      this.worldMap.resize();this.updateWorldMarker();
+    }else if(tab==='region'){
+      if(!atlasState().regional.sceneUuid)return;
+      const region=await resolveRegion();if(!this.alive||generation!==this.generation)return;this.region=region;
+      const caption=this.element.querySelector('.ra-region-caption');caption.textContent=`${region.scene.name}${region.token?` · Following ${region.token.name}`:''}`;
+      const first=!this.regionMap;
+      if(!this.regionMap){this.regionMap=new AtlasMap(this.element.querySelector('.ra-region-stage'),{onPlace:p=>this.placeRegion(p).catch(e=>ui.notifications.error(e.message))});this.regionSrc=region.src;await this.regionMap.load(region.src);}
+      else if(this.regionSrc!==region.src){this.regionSrc=region.src;await this.regionMap.load(region.src);}
+      if(!this.alive||generation!==this.generation)return;
+      this.regionMap.resize();this.regionMap.setMarker(region.marker?{...region.marker,label:region.token?.name??atlasState().party?.label??'The Party'}:null);
+      if(first&&region.marker)this.regionMap.findMarker();
+    }
+  }
+  async focus(id){if(!this.alive||!bodies.some(b=>b.id===id))return;this.changeTab('system','atlas');if(!this.space){this.pendingBody=id;return;}await this.space.focus(id);if(!this.alive)return;this.activeBody=id;
+    this.element.querySelector('[data-body-title]').textContent=bodies.find(b=>b.id===id).name;this.element.querySelector('[data-body-description]').textContent=descriptions[id];
+    this.element.querySelectorAll('[data-focus]').forEach(b=>b.classList.toggle('selected',b.dataset.focus===id));const p=PLANETS.find(p=>p.id===id);
+    this.element.querySelector('.ra-body-facts').innerHTML=p?`<dt>Orbital Period</dt><dd>${p.period.toLocaleString()} days</dd><dt>From the Sun</dt><dd>${p.radius.toLocaleString()} million miles</dd>`:id==='toril'?'<dt>Party Position</dt><dd>'+esc(partyLabel(atlasState().party))+'</dd>':'';
+  }
+  async tool(action){
+    if(action==='home'){if(this.tabGroups.atlas==='system'){this.space?.home();this.activeBody=null;this.element.querySelectorAll('[data-focus]').forEach(b=>b.classList.remove('selected'));this.element.querySelector('[data-body-title]').textContent='The Solar System';this.element.querySelector('[data-body-description]').textContent='Select a world to approach it. Drag to orbit and use the wheel to zoom.';this.element.querySelector('.ra-body-facts').innerHTML='';}else(this.tabGroups.atlas==='world'?this.worldMap:this.regionMap)?.fit();}
+    if(action==='survey'){this.space?.setSurvey(!this.space.survey);this.element.querySelector('[data-tool="survey"]').setAttribute('aria-pressed',String(this.space?.survey));}
+    if(action==='find'){const party=atlasState().party;if(this.tabGroups.atlas==='system'){if(!party)throw new Error('Set the party position on Toril first.');await this.focus('toril');this.space.findParty();}else if(this.tabGroups.atlas==='world'){if(!party)throw new Error('Set the party position on Toril first.');this.worldMap?.findMarker();}else this.regionMap?.findMarker();}
+    if(action==='place'){if(!game.user.isGM)return;if(this.tabGroups.atlas==='system'&&this.activeBody!=='toril')await this.focus('toril');this.setPlacement(!this.placing);}
+    if(action==='link'&&game.user.isGM)new RegionLinkDialog(async()=>{this.regionMap?.dispose();this.regionMap=null;this.changeTab('region','atlas',{force:true});}).render(true);
+    if(action==='scene'){const r=await resolveRegion();if(r)await r.scene.view();}
+    if(action==='credits')foundry.applications.api.DialogV2.prompt({window:{title:'Atlas Map Sources'},content:'<p>Toril geography and terrain use <a href="https://www.geospatial-grimoire.com/worlds/toril/gis/" target="_blank" rel="noopener">Toril GIS by Geospatial Grimoire</a>. Coordinates follow its FRIA meridian.</p><p>This is unofficial, noncommercial Forgotten Realms fan content. Wizards of the Coast has not approved or endorsed it. Referenced Forgotten Realms material belongs to Wizards of the Coast LLC.</p><p>The regional image comes from your linked scene. Planet surfaces beyond Toril are original interpretations of the published descriptions.</p><p>Three.js renders the system under its MIT license. Orbital alignments are configurable approximations.</p>',ok:{label:'Close'}});
+  }
+  setPlacement(value){this.placing=value;this.space?.setPlacement(value&&this.tabGroups.atlas==='system');this.worldMap?.setPlacement(value&&this.tabGroups.atlas==='world');this.regionMap?.setPlacement(value&&this.tabGroups.atlas==='region');const button=this.element?.querySelector('[data-tool="place"]');if(button)button.setAttribute('aria-pressed',String(value));const status=this.element?.querySelector('.ra-atlas-status');if(status)status.textContent=value?'Click the map to place the party.':'';}
+  async placeWorld(p){if(!game.user.isGM||!this.placing)return;const data=await loadAtlasData();const distance=c=>Math.hypot(c.lat-p.lat,(c.lon-p.lon)*Math.cos(p.lat*Math.PI/180));const nearest=[...data.places].sort((a,b)=>distance(a)-distance(b))[0];const regions=data.regions.filter(r=>p.lon>=r.bounds.west&&p.lon<=r.bounds.east&&p.lat>=r.bounds.south&&p.lat<=r.bounds.north).sort((a,b)=>(a.bounds.east-a.bounds.west)*(a.bounds.north-a.bounds.south)-(b.bounds.east-b.bounds.west)*(b.bounds.north-b.bounds.south));const location=nearest&&distance(nearest)<.2?nearest.name:regions[0]?.name??'';await setPartyPosition(p.lat,p.lon,atlasState().party?.label??'The Party',location);this.setPlacement(false);this.refreshState();}
+  async placeRegion(p){if(!game.user.isGM||!this.placing)return;const region=await resolveRegion();if(region.token){const d=region.scene.dimensions??region.scene.getDimensions(),size=region.scene.toObject().grid?.size??100;await region.token.update({x:d.sceneX+p.u*d.sceneWidth-region.token.width*size/2,y:d.sceneY+p.v*d.sceneHeight-region.token.height*size/2});}else await saveAtlas({regional:{...atlasState().regional,marker:p}});this.setPlacement(false);await this.refreshState();}
+  updateWorldMarker(){const p=atlasState().party;this.worldMap?.setMarker(p?{...mapUV(p.lat,p.lon),label:partyLabel(p)}:null);}
+  async refreshState(){if(!this.alive)return;this.space?.update();this.updateWorldMarker();if(this.activeBody==='toril')this.element.querySelector('.ra-body-facts').innerHTML='<dt>Party Position</dt><dd>'+esc(partyLabel(atlasState().party))+'</dd>';if(this.tabGroups.atlas==='region')await this.activateView('region');}
+  async search(query){const node=this.element.querySelector('.ra-place-results');if(query.trim().length<2){node.replaceChildren();return;}const data=await loadAtlasData();if(!this.alive)return;const q=query.toLowerCase(),matches=[...data.regions,...data.places].filter(p=>p.name.toLowerCase().includes(q)).slice(0,10);node.innerHTML=matches.map((p,i)=>`<button type="button" data-place="${i}">${esc(p.name)} <small>${esc(p.kind??'Region')}</small></button>`).join('');node.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{const p=matches[Number(b.dataset.place)];this.worldMap.focus(p.lat,p.lon,p.bounds?Math.min(40,230/(p.bounds.east-p.bounds.west)):30);node.replaceChildren();}));}
+  disposeViews(){this.generation=(this.generation??0)+1;this.space?.dispose();this.worldMap?.dispose();this.regionMap?.dispose();this.space=null;this.worldMap=null;this.regionMap=null;}
+  async close(options){this.alive=false;for(const[n,id]of this.hooks)Hooks.off(n,id);this.hooks=[];this.disposeViews();return super.close(options);}
+}

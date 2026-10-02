@@ -118,3 +118,5 @@ body.ra-replace-bars #dnd5e-calendar { display:none !important; }
 .ra-sky-window .window-content {overflow-y:auto;}
 .ra-sky-window td,.ra-sky-window th {padding:8px;text-align:left;}
 .ra-planet-dot {display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:8px;}
+#realms-almanac .ra-horizon-label {font-size:7px;fill:var(--ra-light);opacity:.65;font-family:var(--font-body,sans-serif);}
+#realms-almanac .ra-planet {cursor:pointer;}
