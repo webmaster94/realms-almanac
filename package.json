@@ -1,0 +1,7 @@
+{
+  "name": "realms-almanac",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {"test": "node --test tests/*.test.mjs", "check": "node --check scripts/main.mjs && node --check scripts/model.mjs && node --check scripts/art.mjs"}
+}

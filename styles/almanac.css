@@ -1,0 +1,82 @@
+/* Original brass, enamel and celestial line work. No Ember assets. */
+body.ra-replace-bars #simple-timekeeping,
+body.ra-replace-bars #ember-calendar,
+body.ra-replace-bars #dnd5e-calendar { display:none !important; }
+#realms-almanac {
+  --ra-width:560px; --ra-top:0px; --ra-season:#ad976f;
+  position:fixed; top:var(--ra-top); left:50%; transform:translateX(-50%);
+  width:min(var(--ra-width),calc(100vw - 24px)); z-index:60; pointer-events:none;
+  color:#e8ddbe; font-family:var(--font-body, "Signika", sans-serif);
+  filter:drop-shadow(0 3px 4px #0008); line-height:1.2;
+}
+#realms-almanac[hidden] {display:none !important;}
+#realms-almanac * {box-sizing:border-box;}
+#realms-almanac button, #realms-almanac select {pointer-events:auto;cursor:pointer;box-shadow:none;}
+#realms-almanac button {margin:0; min-height:0; color:inherit; font-family:inherit;}
+#realms-almanac button:focus-visible, #realms-almanac select:focus-visible, #realms-almanac .ra-lunar:focus-visible {outline:2px solid #e7d29c;outline-offset:2px;}
+#realms-almanac .ra-rail {
+  height:36px;position:relative;z-index:3;display:flex;align-items:center;justify-content:space-between;
+  padding:0 13px;gap:4px;border:3px solid #8a7147;border-top:0;border-radius:0 0 24px 24px;
+  background:linear-gradient(90deg,#121722,#202131 40%,#202131 60%,#121722);
+  box-shadow:0 0 0 2px #100e0d, inset 0 0 0 1px #dac59277,inset 0 -4px 7px #0007;
+}
+#realms-almanac .ra-rail::before {content:"";position:absolute;inset:0 8px 4px;border:1px solid #9b805545;border-top:0;border-radius:0 0 19px 19px;pointer-events:none;}
+#realms-almanac .ra-controls {display:flex;align-items:center;gap:5px; flex:1;position:relative;}
+#realms-almanac .ra-controls.ra-right {justify-content:flex-end;}
+#realms-almanac .ra-controls button {background:none;border:0;width:24px;height:27px;padding:0;font-size:13px;color:#ddcba5;flex:none;}
+#realms-almanac .ra-controls button:hover {color:#fff0c9;text-shadow:0 0 8px #d9b774;}
+#realms-almanac button:disabled {opacity:.35;cursor:wait;}
+#realms-almanac .ra-clock {border:0;background:none;width:130px;flex:none; padding:0;height:28px;}
+#realms-almanac .ra-time {font-family:var(--font-serif,Georgia,serif);font-size:17px;letter-spacing:.07em;color:#f2e8d3;font-weight:500;white-space:nowrap;}
+#realms-almanac select {width:76px;height:24px;min-height:0;border:1px solid #ac8f5745;border-radius:4px;background:#111520;color:#e5d4b0;font-size:11px;padding:0 3px;line-height:20px;}
+#realms-almanac select option {color:#eee2c8;background:#171c2b;}
+#realms-almanac .ra-ribbon {
+  position:relative;z-index:2;display:flex;align-items:center;justify-content:center;gap:18px;
+  width:calc(100% - 96px);height:26px;margin:-1px auto 0;padding:0 25px;border:0;border-radius:0;
+  clip-path:polygon(0 0,100% 0,calc(100% - 23px) 100%,23px 100%);
+  background:linear-gradient(180deg,#ecdaa5 0,#715934 2px,#151826 3px,#151826 5px,transparent 5px),linear-gradient(100deg,#26273b,var(--ra-season) 38%,var(--ra-season) 62%,#26273b);
+  box-shadow:inset 0 -2px #b6a070,inset 0 -4px #26202d;
+  color:#161725;text-shadow:0 1px 0 #ffffff25;
+}
+#realms-almanac .ra-ribbon::before, #realms-almanac .ra-ribbon::after {content:"";position:absolute;top:3px;bottom:3px;width:11px;border:2px solid #cbb98988;transform:skewX(40deg);left:21px;}
+#realms-almanac .ra-ribbon::after {left:auto;right:21px;transform:skewX(-40deg);}
+#realms-almanac .ra-ribbon span {font-family:var(--font-serif,Georgia,serif);font-size:11px;text-transform:uppercase;letter-spacing:.13em;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#realms-almanac .ra-ribbon b {margin:0 10px;font-weight:400;}
+#realms-almanac .ra-ribbon .ra-icon {width:17px;height:17px;flex:none;}
+#realms-almanac .ra-festival {filter:brightness(1.12);}
+#realms-almanac .ra-dial {position:relative;width:300px;height:116px;margin:-2px auto 0;transform-origin:top center;}
+#realms-almanac .ra-sky {position:absolute;inset:0;width:100%;height:100%;overflow:visible;}
+#realms-almanac .ra-weather {position:absolute;left:50%;top:6px;transform:translateX(-50%);display:flex;align-items:center;justify-content:center;gap:6px;max-width:225px;border:0;background:none;color:#f4ead6;text-shadow:0 1px 3px #000,0 0 8px #000b;padding:2px 3px;white-space:nowrap;height:25px;}
+#realms-almanac .ra-weather span {font-size:12px;overflow:hidden;text-overflow:ellipsis;}
+#realms-almanac .ra-weather:hover {color:white;}
+#realms-almanac .ra-icon {width:22px;height:22px;flex:none;}
+#realms-almanac .ra-lunar {position:absolute;left:125px;top:37px;width:50px;display:flex;flex-direction:column;align-items:center;pointer-events:auto;border-radius:50%;color:#eef0f6;}
+#realms-almanac .ra-moon-disc {width:32px;height:32px;filter:drop-shadow(0 0 7px #b2beed66);}
+#realms-almanac.ra-period-day .ra-lunar, #realms-almanac.ra-period-dawn .ra-lunar, #realms-almanac.ra-period-dusk .ra-lunar {left:77px;top:40px;}
+#realms-almanac .ra-lunar span {font-family:var(--font-serif,Georgia,serif);font-size:10px;letter-spacing:.06em;text-shadow:0 1px 3px black;}
+#realms-almanac .ra-phase-label {position:absolute;top:83px;width:100%;text-align:center;font-size:8px;text-transform:uppercase;letter-spacing:.14em;color:#e2d9d5;text-shadow:0 1px 3px #000;}
+#realms-almanac.ra-period-day .ra-phase-label, #realms-almanac.ra-period-dawn .ra-phase-label {color:#fff3dc;}
+#realms-almanac.ra-collapsed .ra-dial {display:none;}
+#realms-almanac.ra-animated .ra-precipitation {animation:ra-rain 2s linear infinite;}
+@keyframes ra-rain {from {transform:translate(2px,-3px);}to {transform:translate(-2px,4px);}}
+@media (prefers-reduced-motion:reduce) {#realms-almanac .ra-precipitation {animation:none !important;}}
+@media (max-width:600px) {
+  #realms-almanac .ra-controls {gap:2px;}
+  #realms-almanac .ra-controls button {width:21px;font-size:12px;}
+  #realms-almanac .ra-clock {width:105px;}
+  #realms-almanac .ra-ribbon {width:calc(100% - 50px);gap:8px;}
+  #realms-almanac .ra-ribbon span {font-size:10px;letter-spacing:.08em;}
+  #realms-almanac .ra-rail {padding:0 7px;}
+}
+.ra-settings .window-content {gap:12px;overflow-y:auto;}
+.ra-settings .tab {display:none;}
+.ra-settings .tab.active {display:block;}
+.ra-settings fieldset {margin:0 0 12px;}
+.ra-settings .form-footer {margin-top:auto;}
+.ra-reference .window-content {overflow-y:auto;}
+.ra-reference .ra-icon {width:23px;height:23px;vertical-align:middle;margin-right:8px;color:var(--color-text-emphatic);}
+.ra-reference th, .ra-reference td {padding:5px 8px;text-align:left;}
+.ra-reference tr.current {background:var(--color-bg-option);font-weight:bold;}
+.ra-reference ul {list-style:none;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.ra-reference li {display:flex;align-items:center;}
+.ra-reference small {display:block;color:var(--color-text-secondary);}
