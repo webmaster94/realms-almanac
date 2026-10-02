@@ -6,7 +6,7 @@ body.ra-replace-bars #dnd5e-calendar { display:none !important; }
   --ra-width:560px; --ra-top:0px; --ra-season:#ad976f;
   position:fixed; top:var(--ra-top); left:50%; transform:translateX(-50%);
   width:min(var(--ra-width),calc(100vw - 24px)); z-index:60; pointer-events:none;
-  color:#e8ddbe; font-family:var(--font-body, "Signika", sans-serif);
+  color:var(--ra-light,#e8ddbe); font-family:var(--font-body, "Signika", sans-serif);
   filter:drop-shadow(0 3px 4px #0008); line-height:1.2;
 }
 #realms-almanac[hidden] {display:none !important;}
@@ -16,29 +16,29 @@ body.ra-replace-bars #dnd5e-calendar { display:none !important; }
 #realms-almanac button:focus-visible, #realms-almanac select:focus-visible, #realms-almanac .ra-lunar:focus-visible {outline:2px solid #e7d29c;outline-offset:2px;}
 #realms-almanac .ra-rail {
   height:36px;position:relative;z-index:3;display:flex;align-items:center;justify-content:space-between;
-  padding:0 13px;gap:4px;border:3px solid #8a7147;border-top:0;border-radius:0 0 24px 24px;
-  background:linear-gradient(90deg,#121722,#202131 40%,#202131 60%,#121722);
-  box-shadow:0 0 0 2px #100e0d, inset 0 0 0 1px #dac59277,inset 0 -4px 7px #0007;
+  padding:0 13px;gap:4px;border:3px solid var(--ra-mid,#8a7147);border-top:0;border-radius:0 0 24px 24px;
+  background:linear-gradient(90deg,var(--ra-rail),var(--ra-rim) 40%,var(--ra-rim) 60%,var(--ra-rail));
+  box-shadow:0 0 0 2px #100e0d, inset 0 0 0 1px color-mix(in srgb,var(--ra-light) 50%,transparent),inset 0 -4px 7px #0007;
 }
-#realms-almanac .ra-rail::before {content:"";position:absolute;inset:0 8px 4px;border:1px solid #9b805545;border-top:0;border-radius:0 0 19px 19px;pointer-events:none;}
+#realms-almanac .ra-rail::before {content:"";position:absolute;inset:0 8px 4px;border:1px solid color-mix(in srgb,var(--ra-mid) 40%,transparent);border-top:0;border-radius:0 0 19px 19px;pointer-events:none;}
 #realms-almanac .ra-controls {display:flex;align-items:center;gap:5px; flex:1;position:relative;}
 #realms-almanac .ra-controls.ra-right {justify-content:flex-end;}
-#realms-almanac .ra-controls button {background:none;border:0;width:24px;height:27px;padding:0;font-size:13px;color:#ddcba5;flex:none;}
+#realms-almanac .ra-controls button {background:none;border:0;width:24px;height:27px;padding:0;font-size:13px;color:var(--ra-light);flex:none;}
 #realms-almanac .ra-controls button:hover {color:#fff0c9;text-shadow:0 0 8px #d9b774;}
 #realms-almanac button:disabled {opacity:.35;cursor:wait;}
 #realms-almanac .ra-clock {border:0;background:none;width:110px;flex:none; padding:0;height:28px;}
 #realms-almanac .ra-time {font-family:var(--font-serif,Georgia,serif);font-size:17px;letter-spacing:.07em;color:#f2e8d3;font-weight:500;white-space:nowrap;}
-#realms-almanac select {width:76px;height:24px;min-height:0;border:1px solid #ac8f5745;border-radius:4px;background:#111520;color:#e5d4b0;font-size:11px;padding:0 3px;line-height:20px;}
-#realms-almanac select option {color:#eee2c8;background:#171c2b;}
+#realms-almanac select {width:76px;height:24px;min-height:0;border:1px solid color-mix(in srgb,var(--ra-mid) 40%,transparent);border-radius:4px;background:var(--ra-rail);color:var(--ra-light);font-size:11px;padding:0 3px;line-height:20px;}
+#realms-almanac select option {color:var(--ra-light);background:var(--ra-rail);}
 #realms-almanac .ra-ribbon {
   position:relative;z-index:2;display:flex;align-items:center;justify-content:center;gap:18px;
   width:calc(100% - 96px);height:26px;margin:-1px auto 0;padding:0 25px;border:0;border-radius:0;
   clip-path:polygon(0 0,100% 0,calc(100% - 23px) 100%,23px 100%);
-  background:linear-gradient(180deg,#ecdaa5 0,#715934 2px,#151826 3px,#151826 5px,transparent 5px),linear-gradient(100deg,#26273b,var(--ra-season) 38%,var(--ra-season) 62%,#26273b);
-  box-shadow:inset 0 -2px #b6a070,inset 0 -4px #26202d;
+  background:linear-gradient(180deg,var(--ra-light) 0,var(--ra-dark) 2px,var(--ra-rail) 3px,var(--ra-rail) 5px,transparent 5px),linear-gradient(100deg,var(--ra-rim),var(--ra-season) 38%,var(--ra-season) 62%,var(--ra-rim));
+  box-shadow:inset 0 -2px var(--ra-mid),inset 0 -4px var(--ra-dark);
   color:#161725;text-shadow:0 1px 0 #ffffff25;
 }
-#realms-almanac .ra-ribbon::before, #realms-almanac .ra-ribbon::after {content:"";position:absolute;top:3px;bottom:3px;width:11px;border:2px solid #cbb98988;transform:skewX(40deg);left:21px;}
+#realms-almanac .ra-ribbon::before, #realms-almanac .ra-ribbon::after {content:"";position:absolute;top:3px;bottom:3px;width:11px;border:2px solid color-mix(in srgb,var(--ra-light) 55%,transparent);transform:skewX(40deg);left:21px;}
 #realms-almanac .ra-ribbon::after {left:auto;right:21px;transform:skewX(-40deg);}
 #realms-almanac .ra-ribbon span {font-family:var(--font-serif,Georgia,serif);font-size:11px;text-transform:uppercase;letter-spacing:.13em;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 #realms-almanac .ra-ribbon b {margin:0 10px;font-weight:400;}
@@ -46,15 +46,15 @@ body.ra-replace-bars #dnd5e-calendar { display:none !important; }
 #realms-almanac .ra-festival {filter:brightness(1.12);}
 #realms-almanac .ra-dial {position:relative;width:300px;height:116px;margin:-2px auto 0;transform-origin:top center;}
 #realms-almanac .ra-sky {position:absolute;inset:0;width:100%;height:100%;overflow:visible;}
-#realms-almanac .ra-weather {position:absolute;left:50%;top:6px;transform:translateX(-50%);display:flex;align-items:center;justify-content:center;gap:6px;max-width:225px;border:0;background:none;color:#f4ead6;text-shadow:0 1px 3px #000,0 0 8px #000b;padding:2px 3px;white-space:nowrap;height:25px;}
+#realms-almanac .ra-weather {position:absolute;left:50%;top:2px;transform:translateX(-50%);display:flex;align-items:center;justify-content:center;gap:6px;max-width:225px;border:0;background:none;color:#f4ead6;text-shadow:0 1px 3px #000,0 0 8px #000b;padding:2px 3px;white-space:nowrap;height:22px;}
 #realms-almanac .ra-weather span {font-size:12px;overflow:hidden;text-overflow:ellipsis;}
 #realms-almanac .ra-weather:hover {color:white;}
 #realms-almanac .ra-icon {width:22px;height:22px;flex:none;}
-#realms-almanac .ra-lunar {position:absolute;left:125px;top:37px;width:50px;display:flex;flex-direction:column;align-items:center;pointer-events:auto;border-radius:50%;color:#eef0f6;}
-#realms-almanac .ra-moon-disc {width:32px;height:32px;filter:drop-shadow(0 0 7px #b2beed66);}
-#realms-almanac.ra-period-day .ra-lunar, #realms-almanac.ra-period-dawn .ra-lunar, #realms-almanac.ra-period-dusk .ra-lunar {left:77px;top:40px;}
-#realms-almanac .ra-lunar span {font-family:var(--font-serif,Georgia,serif);font-size:10px;letter-spacing:.06em;text-shadow:0 1px 3px black;}
-#realms-almanac .ra-phase-label {position:absolute;top:83px;width:100%;text-align:center;font-size:8px;text-transform:uppercase;letter-spacing:.14em;color:#e2d9d5;text-shadow:0 1px 3px #000;}
+#realms-almanac .ra-lunar {position:absolute;left:125px;top:27px;width:50px;height:auto;padding:0;border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:0;pointer-events:auto;border-radius:50%;color:#eef0f6;}
+#realms-almanac .ra-moon-disc {width:30px;height:30px;filter:drop-shadow(0 0 7px #b2beed66);flex:none;}
+#realms-almanac.ra-period-day .ra-lunar, #realms-almanac.ra-period-dawn .ra-lunar, #realms-almanac.ra-period-dusk .ra-lunar {left:77px;top:27px;}
+#realms-almanac .ra-lunar span {font-family:var(--font-serif,Georgia,serif);font-size:9px;line-height:10px;letter-spacing:.06em;text-shadow:0 1px 3px black;white-space:nowrap;}
+#realms-almanac .ra-phase-label {position:absolute;top:68px;left:98px;width:104px;text-align:center;font-size:9px;line-height:11px;text-transform:uppercase;letter-spacing:.04em;color:#f2eae0;text-shadow:0 1px 3px #000;white-space:nowrap;}
 #realms-almanac.ra-period-day .ra-phase-label, #realms-almanac.ra-period-dawn .ra-phase-label {color:#fff3dc;}
 #realms-almanac.ra-collapsed .ra-dial {display:none;}
 #realms-almanac.ra-animated .ra-precipitation {animation:ra-rain 2s linear infinite;}
@@ -80,3 +80,41 @@ body.ra-replace-bars #dnd5e-calendar { display:none !important; }
 .ra-reference ul {list-style:none;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:12px;}
 .ra-reference li {display:flex;align-items:center;}
 .ra-reference small {display:block;color:var(--color-text-secondary);}
+.ra-calendar .window-content {gap:12px;overflow:hidden;}
+.ra-calendar .tab {display:none;overflow-y:auto;min-height:0;}
+.ra-calendar .tab.active {display:block;}
+.ra-month-nav {display:flex;gap:8px;align-items:center;}
+.ra-month-nav select {flex:1;}
+.ra-month-nav input {width:85px;flex:none;}
+.ra-month-nav button {width:auto;flex:none;}
+.ra-weekdays,.ra-month-grid {display:grid;grid-template-columns:repeat(var(--ra-week),minmax(0,1fr));gap:4px;}
+.ra-weekdays {font-size:11px;text-align:center;color:var(--color-text-secondary);margin-bottom:5px;}
+.ra-month-grid .ra-day {display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;min-height:70px;height:auto;padding:5px;gap:3px;overflow:hidden;}
+.ra-day strong {font-size:13px;}
+.ra-day span,.ra-day small {font-size:10px;line-height:1.2;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.ra-day.selected {outline:2px solid var(--color-border-highlight);outline-offset:-2px;}
+.ra-day.today strong {border-bottom:2px solid var(--color-text-hyperlink);}
+.ra-day .ra-icon {width:26px;height:26px;}
+.ra-day-heading {display:flex;justify-content:space-between;align-items:center;margin:16px 0 8px;gap:12px;}
+.ra-day-heading h3 {margin:0;}
+.ra-day-heading button {width:auto;}
+.ra-event-list {list-style:none;margin:0;padding:0;}
+.ra-event-list li {display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid var(--color-border-light-tertiary);}
+.ra-event-list .ra-event-open {display:flex;flex-direction:column;align-items:flex-start;flex:1;text-align:left;height:auto;padding:7px;}
+.ra-event-open small {color:var(--color-text-secondary);font-weight:normal;}
+.ra-event-list button[data-edit],.ra-event-list button[data-archive] {width:30px;flex:none;}
+.ra-no-events {color:var(--color-text-secondary);padding:15px 0;}
+.ra-calendar-footer {display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:auto;}
+.ra-calendar-footer button {width:auto;}
+.ra-calendar-footer .hint {flex-basis:100%;}
+.ra-date-fields {display:grid;grid-template-columns:1fr 2fr .7fr .7fr .7fr;gap:8px;}
+.ra-date-fields label {font-size:12px;display:flex;flex-direction:column;gap:4px;}
+.ra-event-editor .window-content {overflow-y:auto;}
+.ra-event-editor textarea {resize:vertical;min-height:110px;}
+.ra-settings textarea {width:100%;font-family:monospace;resize:vertical;}
+.ra-settings details>button {margin-top:10px;}
+.ra-end-date[hidden] {display:none;}
+.ra-planet {pointer-events:auto;}
+.ra-sky-window .window-content {overflow-y:auto;}
+.ra-sky-window td,.ra-sky-window th {padding:8px;text-align:left;}
+.ra-planet-dot {display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:8px;}

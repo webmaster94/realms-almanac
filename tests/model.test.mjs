@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {phaseForDate,LUNATION,DAY,dateView,motif,isHarptos,intervalSeconds,weatherKind,shouldHideInCombat,escapeHTML} from '../scripts/model.mjs';
+import {tearAppearance,frameTheme} from '../scripts/model.mjs';
+import {tearRocks,TEARS} from '../scripts/art.mjs';
 
 test('Selûne follows the Harptos reference and exact 4-year recurrence',()=>{
   assert.equal(phaseForDate(1372,0).name,'Full Moon');
@@ -55,4 +57,27 @@ test('weather classification and displayed strings handle user content',()=>{
   assert.equal(weatherKind('Sleet | -4°C'),'snow');
   assert.equal(weatherKind('', 'rain'),'rain');
   assert.equal(escapeHTML('<img src=x onerror="bad()">'),'&lt;img src=x onerror=&quot;bad()&quot;&gt;');
+});
+test('Tears obey daylight, horizon and weather visibility independently of lunar phase',()=>{
+  const full={q:0,hour:23,dawn:6,dusk:18,lag:4,weather:'clear'};
+  assert.ok(tearAppearance(full).opacity>0);
+  assert.equal(tearAppearance({...full,hour:20}).opacity,0); // Moon has risen; Tears have not.
+  assert.equal(tearAppearance({...full,hour:12}).opacity,0);
+  assert.equal(tearAppearance({...full,weather:'storm'}).opacity,0);
+  assert.equal(tearAppearance({...full,weather:'fog'}).opacity,0);
+  assert.ok(tearAppearance({...full,weather:'cloud'}).opacity<tearAppearance(full).opacity);
+  assert.equal(tearAppearance({...full,q:1/3,hour:23}).lit,0); // This rock, not Selûne, is new.
+  assert.notEqual(tearAppearance(full).lit,tearAppearance({...full,lag:7}).lit);
+});
+test('rock rendering contains textured bodies and fits the inner dial',()=>{
+  const svg=tearRocks({phase:{q:.6266},hour:1.8,dawn:6,dusk:18,weather:'clear'});
+  assert.ok(svg.includes('ra-tear-rock'));
+  assert.ok(svg.includes('-surface'));
+  assert.equal(tearRocks({phase:null,hour:1}), '');
+  for(const [x,y,r] of TEARS)assert.ok(Math.hypot(x-160,y+Math.sqrt(121**2-117**2))+r<121);
+});
+test('the frame palette varies across months and holidays',()=>{
+  assert.notEqual(frameTheme('Hammer').rail,frameTheme('Flamerule').rail);
+  assert.notEqual(frameTheme('Hammer').mid,frameTheme('Midwinter').mid);
+  for(const value of Object.values(frameTheme('Nightal')))assert.match(value,/^#[0-9a-f]{6}$/i);
 });

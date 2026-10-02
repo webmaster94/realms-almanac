@@ -52,7 +52,9 @@ Selûne appears cratered from Toril. Sources disagree on its distance, and the w
 
 The Tears are hundreds of asteroids; observers commonly distinguish nine star-like points. They trail the moon across a broad part of the sky. The first appears about four hours after moonrise, and the cluster takes about three hours to rise completely. They are visible only at night, and not every night. The wiki attributes the sky description to *A Grand Tour of the Realms* and the physical cluster to *Realmspace*. [Tears of Selûne](https://forgottenrealms.fandom.com/wiki/Tears_of_Sel%C3%BBne)
 
-For the compact bar, draw a shaded moon disc and nine small points in a trailing cluster. Treat the cluster's compressed spacing as an illustration. Do not draw extra moon discs or a ring attached to the lunar surface. Fade the stars in daylight and under heavy cloud. If the bar claims actual visibility, add approximate horizon timing and make its limits explicit in a tooltip. A persistent moon-phase badge can remain available even when the moon is below the horizon.
+The current design shows enlarged rocky bodies with individual irregular silhouettes, facets and craters. Their compressed spacing and resolved surfaces are illustrations, not a claim that these details are visible unaided. The phase badge remains available even when Selûne is below the horizon.
+
+For visibility, the module distributes the nine bodies across a four-to-seven-hour rise delay. Each body's illumination uses that angular offset from Selûne, so the rocks need not share the moon's phase. A twelve-hour horizon crossing is an approximation. Bodies fade near that horizon, in daylight and under cloud; fog and storms obscure them. The model does not simulate orbital inclination, eclipses or atmospheric scattering.
 
 ## Calculation recommendations
 

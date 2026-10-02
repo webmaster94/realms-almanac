@@ -32,6 +32,11 @@ export function motif(name) {
   const key = normalize(name);
   return FESTIVALS[key] ?? MONTHS.find(m => normalize(m[0]) === (key === "eleasias" ? "eleasis" : key)) ?? [name, "", "star", "#a8b7cd"];
 }
+export function frameTheme(name) {
+  const base=motif(name)[3];
+  const blend=(other,weight)=>'#'+[0,1,2].map(i=>Math.round(parseInt(base.slice(1+i*2,3+i*2),16)*(1-weight)+parseInt(other.slice(1+i*2,3+i*2),16)*weight).toString(16).padStart(2,'0')).join('');
+  return {base,dark:blend('#171322',.68),mid:blend('#6c6571',.18),light:blend('#fff7df',.64),rail:blend('#101422',.87),rim:blend('#151a30',.78)};
+}
 export function isHarptos(calendar, localize = x => x) {
   const names = (calendar.months?.values ?? []).map(m => normalize(localize(m.name)));
   return names.includes("hammer") && names.includes("nightal");
@@ -41,6 +46,25 @@ export function phaseForDate(year, day, hour = 0, minute = 0, second = 0, offset
   const q = mod((elapsedDays + offsetDays) * DAY + hour * 3600 + minute * 60 + second, LUNATION) / LUNATION;
   const names = ["Full Moon", "Waning Gibbous", "Last Quarter", "Waning Crescent", "New Moon", "Waxing Crescent", "First Quarter", "Waxing Gibbous"];
   return {q, lit: (1 + Math.cos(2 * Math.PI * q)) / 2, name: names[Math.round(q * 8) % 8], waxing: q > 0.5};
+}
+
+const smooth = value => { const t=Math.max(0,Math.min(1,value)); return t*t*(3-2*t); };
+/** Approximate trailing-cluster visibility, not an orbital ephemeris.
+ * The lore's 4–7 hour rise delay supplies the angular separation from Selûne.
+ * Assume a 12-hour horizon crossing and scale apparent contrast by illumination.
+ */
+export function tearAppearance({q, hour, dawn=6, dusk=18, lag=4, weather="clear"}) {
+  if (![q,hour,dawn,dusk,lag].every(Number.isFinite)) return {q:0,lit:0,opacity:0};
+  const phase=mod(q+lag/24,1);
+  const lit=(1+Math.cos(phase*2*Math.PI))/2;
+  const sinceDusk=mod(hour-dusk,24), nightLength=mod(dawn-dusk,24);
+  const darkness=sinceDusk<nightLength ? smooth(sinceDusk/.75)*smooth((nightLength-sinceDusk)/.75) : 0;
+  const risen=mod(hour-mod(dusk+q*24+lag,24),24);
+  const horizon=risen<12 ? smooth(risen/.6)*smooth((12-risen)/.6) : 0;
+  const transmission={clear:1,wind:.9,cloud:.25,rain:.1,snow:.12,storm:0,fog:0}[weather] ?? 1;
+  // A fully unlit rock disappears; there is no glowing outline on its dark face.
+  const contrast=smooth(lit/.12)*(.25+.75*Math.sqrt(lit));
+  return {q:phase,lit,opacity:darkness*horizon*transmission*contrast};
 }
 export function weatherKind(label = "", effect = "") {
   const t = `${label} ${effect}`.toLowerCase();

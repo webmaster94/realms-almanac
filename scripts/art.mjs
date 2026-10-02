@@ -1,4 +1,5 @@
-import {escapeHTML, mod} from "./model.mjs";
+import {mod, tearAppearance, frameTheme} from "./model.mjs";
+import {planetArt} from './planets.mjs';
 
 const glyphs = {
   snow: '<path d="M12 2v20M3.3 7l17.4 10M3.3 17L20.7 7M8 4l4 4 4-4M8 20l4-4 4 4M3 11l5-1-1-5M21 13l-5 1 1 5M3 13l5 1-1 5M21 11l-5-1 1-5"/>',
@@ -30,7 +31,7 @@ export function icon(name, cls = "") {
 
 // Construct the lit portion of a spherical disc from projected longitude.
 // q=0 is full, q=.5 is new. The waning half is lit on the left.
-export function moonDisc(q, id = "ra-moon") {
+export function litDiscPath(q) {
   const cos = Math.cos(q * 2 * Math.PI);
   const side = q < .5 ? -1 : 1;
   const edge = [], terminator = [];
@@ -40,10 +41,38 @@ export function moonDisc(q, id = "ra-moon") {
     edge.push(`${16 + side * 14 * x},${16 + 14 * y}`);
     terminator.unshift(`${16 - side * cos * 14 * x},${16 + 14 * y}`);
   }
-  return `<svg viewBox="0 0 32 32" class="ra-moon-disc" aria-hidden="true"><defs><radialGradient id="${id}"><stop stop-color="#fbf8df"/><stop offset=".55" stop-color="#d4dce4"/><stop offset="1" stop-color="#8b9bae"/></radialGradient><clipPath id="${id}-lit"><path d="M${edge.join("L")}L${terminator.join("L")}Z"/></clipPath></defs><circle cx="16" cy="16" r="14.5" fill="#0e162d" stroke="#8897b5" stroke-opacity=".55" stroke-width=".6"/><g clip-path="url(#${id}-lit)"><circle cx="16" cy="16" r="14" fill="url(#${id})"/><g fill="#69778f" opacity=".3"><circle cx="10" cy="10" r="3.2"/><circle cx="20" cy="19" r="4"/><circle cx="11" cy="23" r="2.2"/><circle cx="22" cy="8" r="1.8"/><circle cx="7" cy="16" r="1.2"/></g></g></svg>`;
+  return `M${edge.join("L")}L${terminator.join("L")}Z`;
+}
+export function moonDisc(q, id = "ra-moon") {
+  return `<svg viewBox="0 0 32 32" class="ra-moon-disc" aria-hidden="true"><defs><radialGradient id="${id}"><stop stop-color="#fbf8df"/><stop offset=".55" stop-color="#d4dce4"/><stop offset="1" stop-color="#8b9bae"/></radialGradient><clipPath id="${id}-lit"><path d="${litDiscPath(q)}"/></clipPath></defs><circle cx="16" cy="16" r="14.5" fill="#0e162d" stroke="#8897b5" stroke-opacity=".55" stroke-width=".6"/><g clip-path="url(#${id}-lit)"><circle cx="16" cy="16" r="14" fill="url(#${id})"/><g fill="#69778f" opacity=".3"><circle cx="10" cy="10" r="3.2"/><circle cx="20" cy="19" r="4"/><circle cx="11" cy="23" r="2.2"/><circle cx="22" cy="8" r="1.8"/><circle cx="7" cy="16" r="1.2"/></g></g></svg>`;
 }
 
-export function skyArt({period, weather, hour, dawn, dusk, phase, showTears = true}) {
+export const TEARS = [[202,57,4.1],[211,47,3.1],[220,51,3.7],[227,36,3],[237,40,4.3],[242,25,2.9],[253,29,3.7],[257,14,2.8],[267,9,3.4]];
+export function tearRocks({phase,hour,dawn,dusk,weather,showTears=true}) {
+  if(!showTears || !phase) return "";
+  return `<g class="ra-tears">${TEARS.map(([x,y,r],i)=>{
+    const state=tearAppearance({q:phase.q,hour,dawn,dusk,weather,lag:4+i*3/8});
+    if(state.opacity<.01) return "";
+    const id=`ra-rock-${i}`, lightX=state.q<.5?'0%':'100%';
+    // Stable, individually shaped bodies. Facets and craters share the lit mask.
+    const points=Array.from({length:11},(_,j)=>{
+      const angle=j*2*Math.PI/11, radius=12.7-(mod(i*7+j*13,9)/9)*2.4;
+      return `${16+Math.cos(angle)*radius},${16+Math.sin(angle)*radius}`;
+    }).join(' ');
+    return `<svg class="ra-tear-rock" data-tear="${i}" x="${x-r}" y="${y-r}" width="${r*2}" height="${r*2}" viewBox="0 0 32 32" opacity="${state.opacity.toFixed(3)}"><defs>
+      <clipPath id="${id}-shape"><polygon points="${points}"/></clipPath><clipPath id="${id}-lit"><path d="${litDiscPath(state.q)}"/></clipPath>
+      <radialGradient id="${id}-surface" cx="${lightX}" cy="28%" r="110%"><stop stop-color="#efe2c8"/><stop offset=".45" stop-color="#a6a098"/><stop offset="1" stop-color="#474d5b"/></radialGradient>
+      </defs><g clip-path="url(#${id}-shape)"><rect width="32" height="32" fill="#111522"/>
+      <g clip-path="url(#${id}-lit)"><rect width="32" height="32" fill="url(#${id}-surface)"/>
+      <path d="m4 8 8 2 5-6 8 7-8 5-6-1-7 6Zm13 8 9-5 3 12-11 6-7-14" fill="#ddd0b6" opacity=".22"/>
+      <path d="m4 8 8 2 5-6m-5 6-1 5 7 14m-7-14 6 1 9-5" stroke="#4f4b49" stroke-width=".8" fill="none"/>
+      <g transform="rotate(${i*37} 16 16)"><ellipse cx="10" cy="10" rx="3.1" ry="2.3" fill="#514f50"/><path d="M7 11q3 4 6 0" fill="none" stroke="#d5c6a9" stroke-width=".65"/>
+      <ellipse cx="21" cy="20" rx="2.6" ry="3.2" fill="#56565a"/><path d="M19 23q3 2 5-2" fill="none" stroke="#d3c5ab" stroke-width=".7"/><circle cx="9" cy="22" r="1.2" fill="#4c4e56"/></g>
+      </g></g></svg>`;
+  }).join('')}</g>`;
+}
+
+export function skyArt({period, weather, hour, dawn, dusk, phase, showTears = true, frame=frameTheme('Eleasis'),planets=[]}) {
   const colors = {night:["#10132c", "#35335e", "#806b87"], day:["#245773", "#77adba", "#e2cb95"], dawn:["#514567", "#b48293", "#edc88e"], dusk:["#272b51", "#8b617a", "#d99a6f"]}[period];
   const night = period === "night";
   const cloud = ["cloud", "rain", "storm", "snow", "fog"].includes(weather);
@@ -62,11 +91,11 @@ export function skyArt({period, weather, hour, dawn, dusk, phase, showTears = tr
   const sunProgress = Math.max(0, Math.min(1, (hour-dawn)/(dusk-dawn)));
   const sx = 62 + sunProgress * 196, sy = 78 - Math.sin(sunProgress*Math.PI)*42;
   const sun = !night ? `<g class="ra-sun" transform="translate(${sx} ${sy})"><circle r="20" fill="url(#ra-sun-glow)"/><g stroke="#f5dda2" opacity=".85">${Array.from({length:12},(_,i)=>`<path transform="rotate(${i*30})" d="M0 9v5"/>`).join("")}</g><circle r="6.5" fill="#fff0b0" stroke="#d9a963"/></g>` : "";
-  const tears = showTears && night ? `<g class="ra-tears" fill="#e4edff" opacity="${cloud ? .24 : .95}">${[[190,66],[201,63],[207,52],[217,57],[222,45],[233,47],[238,33],[248,33],[253,21]].map(([x,y],i)=>`<path d="M${x-2.5} ${y}h5m-2.5-2.5v5" stroke="#c8ddff" stroke-width="${i%3 ? .8 : 1.1}"/><circle cx="${x}" cy="${y}" r="${i%3 ? 1 : 1.5}"/>`).join("")}</g>` : "";
+  const tears = tearRocks({phase,hour,dawn,dusk,weather,showTears});
   const clouds = cloud ? `<g class="ra-clouds" opacity="${night ? .7 : .85}" fill="url(#ra-cloud)"><path d="M-20 55Q10 35 39 49Q52 21 75 43Q103 32 123 58Q153 37 178 62L190 86H-20Z"/><path d="M176 38Q197 16 218 39Q244 11 264 36Q293 24 328 47V80H176Z"/></g>` : "";
   const precipitation = ["rain","storm","snow"].includes(weather) ? `<g class="ra-precipitation" stroke="#d5e4f3" opacity=".6">${Array.from({length:22},(_,i)=> {const x=55+mod(i*43,220),y=39+mod(i*23,65);return weather==="snow"?`<circle cx="${x}" cy="${y}" r="1" fill="#fff"/>`:`<path d="M${x} ${y}l-3 7"/>`;}).join("")}</g>` : "";
   return `<svg class="ra-sky" viewBox="0 0 320 124" aria-hidden="true"><defs>
-    <linearGradient id="ra-gold" x2="0.8" y2="1"><stop stop-color="#35261c"/><stop offset=".18" stop-color="#b59a65"/><stop offset=".38" stop-color="#f0dfab"/><stop offset=".53" stop-color="#6e5432"/><stop offset=".72" stop-color="#c9ac6c"/><stop offset="1" stop-color="#443420"/></linearGradient>
+    <linearGradient id="ra-gold" x2="0.8" y2="1"><stop stop-color="${frame.dark}"/><stop offset=".18" stop-color="${frame.mid}"/><stop offset=".38" stop-color="${frame.light}"/><stop offset=".53" stop-color="${frame.dark}"/><stop offset=".72" stop-color="${frame.base}"/><stop offset="1" stop-color="${frame.dark}"/></linearGradient>
     <linearGradient id="ra-sky-fill" x2="0" y2="1"><stop stop-color="${colors[0]}"/><stop offset=".65" stop-color="${colors[1]}"/><stop offset="1" stop-color="${colors[2]}"/></linearGradient>
     <linearGradient id="ra-cloud" x2="0" y2="1"><stop stop-color="${night ? '#72758d' : '#dae2e2'}"/><stop offset="1" stop-color="${night ? '#30334d' : '#7a93a4'}"/></linearGradient>
     <radialGradient id="ra-sun-glow"><stop stop-color="#fff1b2" stop-opacity=".8"/><stop offset="1" stop-color="#e9c985" stop-opacity="0"/></radialGradient>
@@ -74,13 +103,13 @@ export function skyArt({period, weather, hour, dawn, dusk, phase, showTears = tr
     <clipPath id="ra-inner"><path d="M43 0H277A121 121 0 0 1 43 0Z"/></clipPath>
     </defs>
     <path d="M10 0H310A153 153 0 0 1 10 0Z" fill="#111323" stroke="#090b12" stroke-width="5"/>
-    <path d="M13 0H307A150 150 0 0 1 13 0Z" fill="#171d34" stroke="url(#ra-gold)" stroke-width="3"/>
-    <g clip-path="url(#ra-bowl)" fill="none" stroke="#8492b5" stroke-width=".8" opacity=".22">${swirls}</g>
-    <g fill="none" stroke="#ceb98c" stroke-width=".7" opacity=".6">${ticks}</g>
+    <path d="M13 0H307A150 150 0 0 1 13 0Z" fill="${frame.rim}" stroke="url(#ra-gold)" stroke-width="3"/>
+    <g clip-path="url(#ra-bowl)" fill="none" stroke="${frame.light}" stroke-width=".8" opacity=".22">${swirls}</g>
+    <g fill="none" stroke="${frame.light}" stroke-width=".7" opacity=".6">${ticks}</g>
     <path d="M40 0H280A124 124 0 0 1 40 0Z" fill="url(#ra-sky-fill)" stroke="url(#ra-gold)" stroke-width="3"/>
-    <g clip-path="url(#ra-inner)"><g fill="#e4e3f0" opacity="${night ? .85 : .12}">${starPoints}</g>${sun}${tears}${clouds}${precipitation}
+    <g clip-path="url(#ra-inner)"><g fill="#e4e3f0" opacity="${night ? .85 : .12}">${starPoints}</g>${sun}${tears}${planetArt(planets)}${clouds}${precipitation}
     ${weather==='storm'?'<path class="ra-lightning" d="m245 31-12 20h10l-12 19 25-26h-12l8-13" fill="#eef0ff" opacity=".75"/>':''}
     <path d="M33 99Q71 82 108 97T196 96T290 90V130H33Z" fill="#11182a" opacity=".55"/>
-    </g><path d="m160 105 3 6 7 2-7 2-3 7-3-7-7-2 7-2Z" fill="#d5dcea" stroke="#a99263" stroke-width=".7"/>
+    </g><path d="m160 105 3 6 7 2-7 2-3 7-3-7-7-2 7-2Z" fill="${frame.light}" stroke="${frame.mid}" stroke-width=".7"/>
     </svg>`;
 }

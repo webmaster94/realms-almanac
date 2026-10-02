@@ -1,47 +1,49 @@
 # Realms Almanac
 
-A compact Foundry VTT calendar with a brass control rail, seasonal date ribbon and an enamel celestial dial. Weather sits inside the dial. Selûne uses a shaded lunar disc, with nine trailing stars representing her Tears.
-
-Version 0.1 is an original replacement interface for Simple Timekeeping, not a redistribution of its source. Keep Simple Timekeeping enabled for its calendar selection, date picker, weather generation, events, real-time clock and scene lighting. The almanac reads those existing settings and hides its old bar. Ember is a visual reference only and is not required.
+A standalone calendar, event planner, weather and time engine for Foundry VTT 14. The compact sky dial shows Selûne, her rocky Tears and the planets of Realmspace. Month and festival palettes color the whole frame.
 
 ## Install
 
-Foundry or Forge manifest:
+Use this manifest in Foundry or Forge:
 
 `https://github.com/webmaster94/realms-almanac/releases/latest/download/module.json`
 
-Enable **Realms Almanac** alongside **Simple Timekeeping & Calendar**. The new bar appears at the top center. Installation does not change the world date or any calendar, weather, lighting or automation settings. Disable the almanac to restore the original bar.
+Enable **Realms Almanac**. No other calendar module is required.
 
-## Controls
+## Calendar and events
 
-- Use the interval dropdown to choose one minute, hour or day, then advance or rewind with the end buttons. No modifier keys are required.
-- Click the time to open Simple Timekeeping's date picker.
-- Click the weather to open its calendar and weather settings.
-- The pause button pauses or resumes Simple Timekeeping's clock. Foundry's game pause still takes precedence.
-- The book or date ribbon opens the Harptos reference, including month and festival icons.
-- The calendar button opens the existing events journal.
-- The chevron collapses the celestial dial. The gear opens almanac settings.
+Click the calendar button or date ribbon for the month view. Select a day and choose **Add Event**. Events can repeat daily, by a fixed week interval, monthly or yearly. Monthly events skip festival days; annual Shieldmeet events appear only in leap years.
 
-Players see the date, weather and phase, without GM time controls. Size, position and visibility preferences are per client. The moon phase offset is a world setting available to GMs.
+Each event is an ordinary journal page with its date, optional end time, repetition and description written into the page. **Open Event Journal** opens the same data through Foundry. It remains readable with the module disabled. The calendar respects journal-page ownership. GMs can choose whether each event is visible to players. Archiving hides an event from the calendar but retains its page; Show Archived Events exposes the restore control.
 
-## Calendar and sky
+The clock opens **Set Date & Time**. Use the visible minute/hour/day selector with the forward or back button for smaller changes. Players see the calendar and permitted events but cannot advance world time.
 
-All dates and time advances use the active Foundry calendar. Harptos festival days appear without a day number. Shieldmeet comes from the configured calendar and remains an intercalary day.
+## Time, weather and lighting
 
-Selûne uses the wiki convention of a 30-day, 10-hour, 30-minute cycle, full at midnight on 1 Hammer 1372 DR. The date conversion includes festival days and leap years. Set Moon Phase Offset if the campaign uses a different reference.
+Settings contain Display, Sky, Calendar, Weather, and Time & Light tabs. The module owns its calendar configuration, clock rate, weather generation, temperature units, latitude and lighting behavior.
 
-The dial is an illustration. The moon disc always shows its phase, including when the moon would be below the horizon. The Tears' spacing is compressed; they appear at night and fade under cloud. This release does not predict moonrise, eclipses or exact local sky visibility. See [lore notes](docs/lore.md) for sources and assumptions.
+The active GM advances the clock while the game is unpaused and outside combat. Foundry handles combat time using the configured seconds per round, avoiding a second combat clock. A browser returning from suspension does not fast-forward the world by the whole suspension.
 
-Other calendars display their own date and a neutral celestial emblem. They are never silently converted to Harptos. Without Simple Timekeeping, the almanac can display and advance the core calendar, but the date picker, weather generation and event controls require that module.
+Click the weather to choose a condition and temperature or generate weather. Optional daily generation follows the chosen climate. Scene weather and darkness synchronization are separate opt-in settings. Time and weather settings apply to the world; display preferences apply to each client.
 
-## Combat
+## The sky
 
-Hide During Combat is enabled by default. It follows Foundry's currently selected combat's `started` state, responds to combat creation, start, updates and deletion, and requires no Carousel integration. Preparing an unstarted encounter leaves the bar visible.
+Selûne uses a 30-day, 10-hour, 30-minute cycle, full at midnight on 1 Hammer 1372 DR. The moon disc remains a phase indicator even when it is below the horizon.
+
+The Tears are enlarged, irregular rocky bodies with shaded faces and craters. Their illumination follows their angular separation from the moon. They fade near the approximate horizon and disappear in daylight, thick fog or storms. Some can be visible while others have set. Their shape, size, compressed spacing and rise/set model are illustrations, not a precise ephemeris.
+
+Anadia, Coliar, Karpri, Chandos, Glyth, Garden and H'Catha appear when the model puts them in the visible sky. Click Selûne for the Realmspace sky table. Published distances and periods drive circular orbits; settings provide campaign-specific starting angles because no canonical dated alignment is known. Month-based orbital periods use a 30-day convention. Garden has stricter visibility requirements.
+
+See [lore notes](docs/lore.md) and [Realmspace sources](docs/realmspace.md) for assumptions and references. The module never silently converts a non-Harptos calendar to the Forgotten Realms.
+
+## Upgrading from 0.1
+
+Version 0.2 replaces the former interface-only implementation. A one-time importer preserves the active calendar, displayed year, weather, clock preferences and events journal. It adds readable dates to imported event pages. After the import, disable the former timekeeping module and reload so only the almanac runs the clock. The old settings and event flags are retained for rollback; no event pages are deleted. All normal controls are independent after import.
 
 ## Development
 
-No build step or runtime dependencies. `npm test` checks lunar reference dates, four-year recurrence, festivals, calendar units, visibility and safe labels. `npm run check` checks JavaScript syntax.
+No build step or runtime package dependencies. `npm test` checks the astronomy, visibility and clock logic. `npm run check` checks every JavaScript module. Live verification also covers journal saves, edits, ownership, Harptos holidays and native windows.
 
-Package `module.json`, `scripts`, `styles` and `LICENSE` at the root of `module.zip`. Publish `module.json` and `module.zip` on the version tag. Keep the manifest's version and download URL in sync.
+Package `module.json`, `scripts`, `styles` and `LICENSE` at the ZIP root. Publish `module.json` and `module.zip` with each version tag.
 
-All included code and vector artwork are original and MIT licensed. No protected Simple Timekeeping or Ember code, art or campaign data is included. Forgotten Realms lore and names belong to their respective owners.
+All included code and vector artwork are original and MIT licensed. No protected calendar or adventure source or art is included. Forgotten Realms names and lore belong to their respective owners.
