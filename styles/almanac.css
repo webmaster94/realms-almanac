@@ -26,7 +26,7 @@ body.ra-replace-bars #dnd5e-calendar { display:none !important; }
 #realms-almanac .ra-controls button {background:none;border:0;width:24px;height:27px;padding:0;font-size:13px;color:#ddcba5;flex:none;}
 #realms-almanac .ra-controls button:hover {color:#fff0c9;text-shadow:0 0 8px #d9b774;}
 #realms-almanac button:disabled {opacity:.35;cursor:wait;}
-#realms-almanac .ra-clock {border:0;background:none;width:130px;flex:none; padding:0;height:28px;}
+#realms-almanac .ra-clock {border:0;background:none;width:110px;flex:none; padding:0;height:28px;}
 #realms-almanac .ra-time {font-family:var(--font-serif,Georgia,serif);font-size:17px;letter-spacing:.07em;color:#f2e8d3;font-weight:500;white-space:nowrap;}
 #realms-almanac select {width:76px;height:24px;min-height:0;border:1px solid #ac8f5745;border-radius:4px;background:#111520;color:#e5d4b0;font-size:11px;padding:0 3px;line-height:20px;}
 #realms-almanac select option {color:#eee2c8;background:#171c2b;}
