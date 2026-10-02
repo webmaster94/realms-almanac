@@ -23,7 +23,7 @@ export function occurrencesInMonth(calendar,event,year,month) {
   const add=t=>{if(t>=event.start && t<end && (duration?t+duration>start:t>=start)) result.push({...event,start:t,end:t+duration});};
   if(!event.repeat) {add(event.start);return result;}
   if(event.repeat==='day'||event.repeat==='week') {
-    const step=seconds*(event.repeat==='week'?calendar.days.values.length:1);
+    const step=seconds*(event.repeat==='week'?Math.max(1,calendar.days.values.length):1);
     // For long durations, the most recent occurrence already covers the earlier days.
     let t=event.start+Math.max(0,Math.floor((start-event.start)/step))*step;
     if(t>start && t>event.start) t-=step;

@@ -78,9 +78,11 @@ function bindDateFields(root,prefix='') {
   const update=()=>{
     const year=Number(field('year').value)-config().yearOffset;
     if(!Number.isInteger(year)) return;
-    const months=monthsInYear(cal(),year).filter(m=>m.days>0),selected=Number(field('month').value);
-    const current=months.find(m=>m.index===selected)??months[0];
-    field('month').innerHTML=months.map(m=>`<option value="${m.index}" ${m.index===current.index?'selected':''}>${esc(local(m.name))}</option>`).join('');
+    const all=monthsInYear(cal(),year),months=all.filter(m=>m.days>0),selected=Number(field('month').value);
+    const current=months.find(m=>m.index===selected);
+    field('month').innerHTML=(!current?`<option value="${selected}" selected disabled>${esc(local(all[selected]?.name??'Festival'))} (Not This Year)</option>`:'')+months.map(m=>`<option value="${m.index}" ${m.index===selected?'selected':''}>${esc(local(m.name))}</option>`).join('');
+    field('day').setCustomValidity(current?'':'This festival does not occur in the selected year. Choose another date.');
+    if(!current)return;
     field('day').max=current.days;field('day').value=Math.max(1,Math.min(Number(field('day').value)||1,current.days));
   };
   field('year').addEventListener('change',update);field('month').addEventListener('change',update);

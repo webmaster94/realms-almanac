@@ -1,15 +1,17 @@
-# First-release verification
+# Release verification
 
-Checked 2 October 2026.
+Checked 2 October 2026, through the standalone 0.2 release.
 
-- Eight Node tests pass. They cover the lunar epoch, new and quarter moons, four-year recurrence, dates before the epoch, festival days, calendar units, combat visibility, weather classification and escaped labels.
-- JavaScript syntax checks and `git diff --check` pass.
-- Local Foundry 14.360 loads the installed module after a world restart.
-- Native settings tabs switch correctly, scroll, save and close. The window inherits Foundry's theme.
-- Intercepted time-advance calls produce 60, 3,600 and 86,400 seconds for the three controls, with negative values for rewind. The test does not advance world time.
-- A temporary local encounter leaves the bar visible before combat, hides it with a started round, and restores it after reset and deletion. World time is unchanged and the temporary encounter is removed.
-- Forge 14.367 loads the module alongside Simple Timekeeping 2.0.3 and D&D 5e 6.0.5. The existing date, time, weather and underlying timestamp match the values recorded before installation.
-- The time button opens Simple Timekeeping's date picker. Cancelling leaves the timestamp unchanged.
-- All nine Tears are kept inside the inner sky frame. The controls fit the 420-pixel minimum with the narrower clock.
+- Eighteen automated checks pass for lunar reference dates, the Tears' visibility, planetary geometry, month palettes, clock authority, pauses, darkness and leap-year boundaries.
+- Every JavaScript module passes syntax checks. `git diff --check` passes.
+- Local Foundry 14.360 round-tripped 3,287 dates through the calendar engine across ordinary and leap years. Shieldmeet is unnumbered, annual Shieldmeet events skip ordinary years, and monthly events skip festival days.
+- Native calendar, event and settings windows were inspected. The month view uses ten-day weeks for Harptos and the active calendar's week length elsewhere.
+- A local event was created through the actual form, then edited and removed. Its journal page contained a readable date, recurrence and description. World time did not change.
+- Sharing a new event in a temporary private local journal made the journal browsable while leaving the existing private page private. Test documents were removed.
+- Independent local weather controls saved rain and rendered precipitation, generated new weather, then restored the prior weather. No world-time change occurred.
+- Forge 14.367 imported the existing calendar, displayed year, clock preferences, weather and events journal. The saved world timestamp and date components were identical immediately before and after import.
+- The old timekeeping module was disabled. Forge then loaded `AlmanacCalendarData` with no old UI instance and resumed the configured one-second-per-second clock.
+- Forge's month view and Realmspace sky window were opened and inspected. The settings UI contains no references to another calendar module.
+- The lunar labels sit inside the dial, the Tears have textured rock silhouettes, and the frame follows the active month palette.
 
-The almanac does not replace Simple Timekeeping's calendar engine. Sky positions are illustrative, and exact moonrise and eclipse predictions remain outside this release.
+Sky visibility remains approximate. The orbital model uses published periods and distances with configurable initial angles; it does not claim a canonical dated planetary alignment or predict eclipses.

@@ -33,7 +33,10 @@ export class AlmanacSettings extends foundry.applications.api.ApplicationV2 {
       if(game.user.isGM) {
         cfg={...config(),calendar:JSON.parse(d.calendarJSON)};
         new AlmanacCalendarData(cfg.calendar,{strict:true});
-        if(!cfg.calendar.months.values.length||cfg.calendar.months.values.some(m=>m.days<0)) throw new Error('The calendar needs valid months.');
+        const months=cfg.calendar.months.values;
+        if(!months.length||months.some(m=>!Number.isInteger(m.days)||m.days<0||!Number.isInteger(m.leapDays??m.days)||(m.leapDays??m.days)<0)) throw new Error('Month lengths must be whole, nonnegative numbers of days.');
+        if(months.reduce((sum,m)=>sum+m.days,0)!==cfg.calendar.days.daysPerYear)throw new Error('The month lengths must add up to the configured days per year.');
+        if(!cfg.calendar.days.values.length)throw new Error('Define at least one weekday.');
         for(const key of ['yearOffset','latitude','dawn','dusk','rate','roundSeconds']) {cfg[key]=Number(d[key]);if(!Number.isFinite(cfg[key]))throw new Error('Enter valid calendar and clock values.');}
         if(cfg.dawn>=cfg.dusk) throw new Error('Sunrise must be before sunset.');
         for(const key of ['autoWeather','weatherEffects','running','seasonalSun','lighting'])cfg[key]=Boolean(d[key]);
