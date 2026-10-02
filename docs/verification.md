@@ -25,3 +25,7 @@ Sky visibility remains approximate. The orbital model uses published periods and
 - The linked marker rendered at the token center. Moving it in the atlas updated the temporary token to the expected coordinates, without changing world time or the active scene.
 - Globe party placement was checked. Test settings were restored and the temporary scene was deleted.
 - Closing the atlas disposes its renderers and removes its canvases. Toril map assets carry their source attribution and separate fan-content terms; the user's regional image is not bundled.
+
+- Forge 14.367 installed the atlas successfully. Its regional link was filled through the actual Scene UUID/browser form and follows the existing Group token on the selected map. The active scene was unchanged.
+- The first-use form remains the default for unconfigured worlds; no campaign scene identifier is embedded in the release.
+- Atlas close/reopen was tested before arming party placement. It resets inspection state and correctly enters the Toril view.

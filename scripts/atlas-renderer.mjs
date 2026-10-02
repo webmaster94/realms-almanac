@@ -14,7 +14,7 @@ export class AtlasRenderer {
     this.camera=new T.PerspectiveCamera(45,1,.05,2500);this.camera.position.set(0,280,370);
     this.controls=new T.OrbitControls(this.camera,this.renderer.domElement);this.controls.enableDamping=true;this.controls.dampingFactor=.09;this.controls.minDistance=10;this.controls.maxDistance=850;
     this.system=new T.Scene();this.system.background=new T.Color('#040812');this.focusScene=new T.Scene();this.focusScene.background=new T.Color('#040812');
-    this.system.add(new T.AmbientLight(0x7895b5,.22));const sun=new T.PointLight(0xffe4b8,3,0,0);this.system.add(sun);
+    this.systemAmbient=new T.AmbientLight(0x7895b5,.22);this.system.add(this.systemAmbient);const sun=new T.PointLight(0xffe4b8,3,0,0);this.system.add(sun);
     this.focusAmbient=new T.AmbientLight(0x6f8bac,.18);this.focusScene.add(this.focusAmbient);this.focusLight=new T.DirectionalLight(0xffe7be,3.1);this.focusLight.castShadow=true;this.focusLight.shadow.mapSize.set(2048,2048);Object.assign(this.focusLight.shadow.camera,{left:-15,right:15,top:15,bottom:-15,near:.1,far:90});this.focusLight.shadow.bias=-.0004;this.focusScene.add(this.focusLight);this.focusScene.add(this.focusLight.target);
     this.bodies=new Map();this.labels=document.createElement('div');this.labels.className='ra-orbit-labels';host.append(this.labels);
     this.starFields=[];for(const scene of [this.system,this.focusScene]){const points=[];for(let i=0;i<850;i++){const a=i*2.399963,b=Math.acos(1-2*(i+.5)/850);points.push(Math.sin(b)*Math.cos(a)*900,Math.cos(b)*900,Math.sin(b)*Math.sin(a)*900);}const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(points,3));const stars=new T.Points(geo,new T.PointsMaterial({color:0xbed4ed,size:.9,sizeAttenuation:false,transparent:true,opacity:.6}));scene.add(stars);this.starFields.push(stars);}
@@ -52,7 +52,7 @@ export class AtlasRenderer {
     this.draw();
   }
   home(){this.sequence++;this.mode='system';this.labels.hidden=false;this.controls.target.set(0,0,0);this.controls.minDistance=12;this.controls.maxDistance=850;this.camera.position.set(0,280,370);this.controls.update();this.update();this.draw();}
-  setSurvey(value){this.survey=value;this.focusAmbient.intensity=value?.95:.18;}
+  setSurvey(value){this.survey=value;this.focusAmbient.intensity=value?.95:.18;this.systemAmbient.intensity=value?.95:.22;}
   updateMarker(){if(this.selected!=='toril'||!this.focusBody)return;const party=atlasState().party;
     if(!this.partyMarker){this.partyMarker=new T.Mesh(new T.SphereGeometry(.07,12,8),new T.MeshBasicMaterial({color:0xffd678}));this.partyMarker.userData.partyMarker=true;this.focusBody.add(this.partyMarker);}
     if(!this.partyMarker.parent)this.focusBody.add(this.partyMarker);
