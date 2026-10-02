@@ -59,3 +59,23 @@
 #realms-almanac .ra-horizon-label {font-size:7px;fill:var(--ra-light);opacity:.65;font-family:var(--font-body,sans-serif);}
 #realms-almanac .ra-planet {cursor:pointer;}
 @media (max-width:1100px){.ra-body-sidebar{width:175px;}.ra-atlas-date{display:none;}.ra-atlas-tools{flex-wrap:wrap;}}
+
+/* The atlas is a map first. Navigation sits over the sky, leaving its full width. */
+.ra-system-tab {position:relative;}
+.ra-system-stage {width:100%;}
+.ra-body-sidebar {position:absolute;z-index:3;left:16px;top:16px;bottom:16px;width:190px;padding:16px 13px;background:linear-gradient(145deg,#080e1ced,#0d1725db);backdrop-filter:blur(12px);border:1px solid #a99c7040;border-radius:5px;box-shadow:0 8px 30px #0006;gap:8px;}
+.ra-body-heading h2 {font-size:23px;margin:6px 0 9px;}
+.ra-body-heading p {font-size:11px;line-height:1.55;margin:0 0 8px;color:#acbace;}
+.ra-body-list {gap:3px;}
+.ra-body-list button {padding:4px 5px;min-height:32px;gap:9px;font-size:12px;}
+.ra-body-dot {width:20px;height:20px;flex:none;background-color:var(--body-color);background-image:linear-gradient(110deg,transparent 25%,#000b 100%),var(--body-image,none);background-size:cover;box-shadow:inset 2px 1px 4px #ffffff35,0 0 9px #a2bcdd25;border:1px solid #d5e5ff26;}
+.ra-body-list button.selected {background:linear-gradient(90deg,#b5945430,transparent);border-color:#bda47765;}
+.ra-atlas-scale {font-size:9px;color:#8493a7;padding-top:8px;border-top:1px solid #71829730;}
+.ra-space-heading {position:absolute;right:23px;top:23px;text-align:right;pointer-events:none;color:#d0bd94;text-shadow:0 2px 6px #000;}
+.ra-space-heading span {display:block;font-family:var(--font-serif,Georgia,serif);font-size:21px;letter-spacing:.28em;}
+.ra-space-heading small {display:block;font-size:10px;letter-spacing:.13em;margin-top:7px;color:#91a6bf;}
+.ra-orbit-label {padding:3px 7px;font-size:11px;background:#07101e95;border-bottom:1px solid #b4c4dd45;border-radius:2px;letter-spacing:.04em;}
+.ra-orbit-label[data-body=toril] {color:#f4d894;border-color:#e8c66d88;}
+.ra-atlas-tools {background:var(--color-cool-5,#0b1120);}
+.ra-atlas-footer {background:var(--color-cool-5,#0b1120);}
+@media (max-width:1000px){.ra-body-sidebar{width:160px;left:9px;top:9px;bottom:9px;padding:10px;}.ra-body-heading p{font-size:10px;}.ra-body-heading h2{font-size:21px;}.ra-body-list button{min-height:29px;}.ra-body-dot{width:16px;height:16px;}.ra-space-heading span{font-size:17px;}}

@@ -14,6 +14,9 @@ export const weather=()=>game.settings.get(ID,'weather');
 export const displayYear=year=>year+config().yearOffset;
 export const isLeader=()=>game.users.activeGM?.id===game.user.id;
 const legacyEnabled=()=>Boolean(game.settings.get('core','moduleConfiguration')['simple-timekeeping']);
+// Ember's CalendarData subclass also drives its scene shaders, orbital bodies,
+// weather and startup. Replacing only its date configuration removes those APIs.
+const emberOwnsTime=()=>Boolean(game.modules?.get('ember')?.active);
 const fail=error=>{console.error(ID,error);ui.notifications.error(error.message);};
 
 export class AlmanacCalendarData extends foundry.data.CalendarData {
@@ -47,6 +50,7 @@ export class AlmanacCalendarData extends foundry.data.CalendarData {
   }
 }
 export function installCalendar() {
+  if(emberOwnsTime()) return;
   if(!game.settings.get(ID,'initialized')) return;
   CONFIG.time.worldCalendarConfig=foundry.utils.deepClone(config().calendar);
   CONFIG.time.worldCalendarClass=AlmanacCalendarData;
@@ -152,7 +156,7 @@ export class AlmanacEngine {
   async tick(now=performance.now()) {
     const elapsed=Math.max(0,Math.min(5,(now-this.last)/1000));this.last=now;
     // During the one-time import, only the previous clock runs. It is disabled at cutover.
-    if(this.busy || legacyEnabled() || !isLeader() || !config().running || game.paused || game.combat?.started) {this.remainder=0;return;}
+    if(this.busy || emberOwnsTime() || legacyEnabled() || !isLeader() || !config().running || game.paused || game.combat?.started) {this.remainder=0;return;}
     this.remainder+=elapsed*config().rate;
     const seconds=Math.floor(this.remainder);if(!seconds) return;
     this.remainder-=seconds;this.busy=true;
@@ -160,7 +164,7 @@ export class AlmanacEngine {
   }
   async onTime() {
     const c=game.time.calendar.timeToComponents(game.time.worldTime),old=this.previousDay;this.previousDay=c;
-    if(legacyEnabled() || !isLeader()) return;
+    if(emberOwnsTime() || legacyEnabled() || !isLeader()) return;
     if(config().autoWeather && old && (old.year!==c.year||old.day!==c.day)) await generateWeather();
     if(config().lighting && canvas.scene) {
       const {dawn,dusk}=sunTimes(c),level=darknessAt(c.hour+c.minute/60,dawn,dusk);

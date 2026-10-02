@@ -112,7 +112,7 @@ export class RealmsAlmanac {
     if(action==='reference') return this.reference.render(true);
     if(action==='events') {this.calendarApp??=new AlmanacMonthView();return this.calendarApp.render(true);}
     if(action==='sky') {this.skyApp??=new SkyWindow(readWorld);return this.skyApp.render(true);}
-    if(action==='atlas') {const {AtlasWindow}=await import('./atlas-window.mjs');this.atlasApp??=new AtlasWindow(readWorld);if(!this.atlasApp.element?.isConnected)await this.atlasApp.render(true);else this.atlasApp.bringToFront();if(body)await this.atlasApp.focus(body);return;}
+    if(action==='atlas') {const {AtlasWindow}=await import('./atlas-window.mjs');this.atlasApp??=new AtlasWindow(readWorld);if(!this.atlasApp.element?.isConnected)await this.atlasApp.render(true);else this.atlasApp.bringToFront();if(body)await this.atlasApp.focus(body);else {this.atlasApp.changeTab('system','atlas');await this.atlasApp.tool('home');}return;}
     if(action==='collapse') return game.settings.set(ID,'collapsed',!get('collapsed'));
     if(!game.user.isGM) {if(action==='date') return this.action('events');return;}
     if(action==='forward'||action==='back') return this.advance(action==='forward'?1:-1);

@@ -12,7 +12,7 @@ export function orbitPositions(days,angles={}) {
   const bodies=[{id:'toril',name:'Toril',radius:200,period:365.25,angle:0,color:'#6aa9cf'},...PLANETS].sort((a,b)=>a.radius-b.radius);
   return bodies.map((p,index)=>{const angle=mod(days/p.period+(angles[p.id]??p.angle)/360,1)*Math.PI*2;
     // Diagram radii keep the inner system navigable. Angular positions and sunlight share this geometry.
-    const orbit=34+index*21;return {...p,angle,orbit,x:Math.cos(angle)*orbit,z:Math.sin(angle)*orbit};});
+    const orbit=[55,90,135,178,223,315,380,445][index];return {...p,angle,orbit,x:Math.cos(angle)*orbit,z:Math.sin(angle)*orbit};});
 }
 export function sceneMapSource(scene){return scene?.background?.src??scene?.toObject().levels?.[0]?.background?.src??'';}
 export function tokenMapUV(scene,token){const d=scene.dimensions??scene.getDimensions(),o=scene.toObject(),size=o.grid?.size??100;return {u:(token.x+(token.width??1)*size/2-d.sceneX)/d.sceneWidth,v:(token.y+(token.height??1)*size/2-d.sceneY)/d.sceneHeight};}

@@ -1,7 +1,26 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 globalThis.foundry={data:{CalendarData:class {}}};
-const {AlmanacEngine,darknessAt,AlmanacCalendarData,HARPTOS}=await import('../scripts/engine.mjs');
+const {AlmanacEngine,darknessAt,AlmanacCalendarData,HARPTOS,installCalendar}=await import('../scripts/engine.mjs');
+
+test('Ember retains its specialized calendar during Almanac initialization and settings changes',()=>{
+  class EmberCalendar {configureEnvironment(){return 'ember';}}
+  const calendarConfig={name:'Ember'};
+  globalThis.CONFIG={time:{worldCalendarClass:EmberCalendar,worldCalendarConfig:calendarConfig,roundTime:6}};
+  foundry.utils={deepClone:structuredClone};
+  let initialized=0;
+  globalThis.game={ready:true,modules:new Map([['ember',{active:true}]]),settings:{get:(_id,key)=>key==='initialized'?true:{calendar:HARPTOS,roundSeconds:12}},time:{initializeCalendar:()=>initialized++}};
+  installCalendar();
+  assert.equal(CONFIG.time.worldCalendarClass,EmberCalendar);
+  assert.equal(CONFIG.time.worldCalendarConfig,calendarConfig);
+  assert.equal(CONFIG.time.roundTime,6);
+  assert.equal(initialized,0);
+  game.modules.get('ember').active=false;
+  installCalendar();
+  assert.equal(CONFIG.time.worldCalendarClass,AlmanacCalendarData);
+  assert.equal(CONFIG.time.worldCalendarConfig.name,HARPTOS.name);
+  assert.equal(initialized,1);
+});
 test('one GM advances the standalone clock while pause and combat stop it',async()=>{
   const settings={configuration:{running:true,rate:60},moduleConfiguration:{}};
   const calls=[];

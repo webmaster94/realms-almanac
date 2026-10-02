@@ -20,7 +20,7 @@ The clock opens **Set Date & Time**. Use the visible minute/hour/day selector wi
 
 ## Time, weather and lighting
 
-Settings contain Display, Sky, Calendar, Weather, and Time & Light tabs. The module owns its calendar configuration, clock rate, weather generation, temperature units, latitude and lighting behavior.
+Settings contain Display, Sky, Calendar, Weather, and Time & Light tabs. The module owns its calendar configuration, clock rate, weather generation, temperature units, latitude and lighting behavior. When Ember is active, Ember retains its specialized calendar and controls time, weather and scene lighting; Almanac does not replace those systems.
 
 The active GM advances the clock while the game is unpaused and outside combat. Foundry handles combat time using the configured seconds per round, avoiding a second combat clock. A browser returning from suspension does not fast-forward the world by the whole suspension.
 
@@ -28,7 +28,7 @@ Click the weather to choose a condition and temperature or generate weather. Opt
 
 ## Realmspace atlas
 
-The planet-ring button opens a 3D star map centered on Amaunator. Click a world or its name to approach it, drag to orbit, and use the wheel to zoom. Terrain is sculpted and illumination faces the central sun. Survey Light can reveal terrain on the night side without changing game lighting.
+The planet-ring button opens a 3D star map centered on Amaunator. Click a world or its name to approach it, drag to orbit, and use the wheel to zoom. Planet close-ups use detailed surface artwork, baked terrain maps, relief geometry, cloud layers and sunlight from the central star. The overview preserves the published planet order, separates the inner and outer system, and opens at a fitted camera distance. Survey Light can reveal terrain on the night side without changing game lighting.
 
 Toril uses an attributed GIS-derived surface, elevation and geography. The World Map tab supports panning, zooming, settlement/region search and GM party placement. Detailed vector shorelines, lakes, forests and rivers appear at close zooms. The dataset includes 1,024 named settlements.
 
@@ -54,8 +54,10 @@ Version 0.2 replaces the former interface-only implementation. A one-time import
 
 ## Development
 
-The released module includes its renderer and assets. Development uses pinned Three.js and esbuild versions; `npm run build:vendor` rebuilds the bundled renderer. `tools/build-toril.py` renders the atlas from Toril GIS snapshot files in `qa/gis` and requires Pillow, NumPy and Shapely. `npm test` checks the astronomy, visibility and clock logic. `npm run check` checks every JavaScript module. Live verification also covers journal saves, edits, ownership, Harptos holidays and native windows.
+The released module includes its renderer and assets. Development uses pinned Three.js and esbuild versions; `npm run build:vendor` rebuilds the bundled renderer. `tools/build-planets.py` bakes the original seamless planetary color, relief and roughness maps. `tools/build-toril.py` renders the atlas from Toril GIS snapshot files in `qa/gis` and requires Pillow, NumPy and Shapely. `npm test` checks the astronomy, visibility and clock logic. `npm run check` checks every JavaScript module. Live verification also covers journal saves, edits, ownership, Harptos holidays and native windows.
 
 Package `module.json`, `scripts`, `styles`, `assets` and `LICENSE` at the ZIP root. Publish `module.json` and `module.zip` with each version tag.
 
 Original code and procedural planetary artwork are MIT licensed. Three.js retains its MIT notice. Derived Toril map assets have separate noncommercial fan-content terms in `assets/toril/NOTICE.md`. No protected calendar/adventure code or the user's regional map is redistributed. Forgotten Realms names and lore belong to their respective owners.
+
+The nebula background was generated with the built-in image tool. Its prompt and saved asset are recorded in [art notes](docs/atlas-art.md). Official and fan maps were inspected as references; their images are not bundled.
