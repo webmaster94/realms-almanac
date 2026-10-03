@@ -30,7 +30,9 @@ Click the weather to choose a condition and temperature or generate weather. Opt
 
 The planet-ring button opens a 3D star map centered on Amaunator. Click a world or its name to approach it, drag to orbit, and use the wheel to zoom. Planet close-ups use detailed surface artwork, baked terrain maps, relief geometry, cloud layers and sunlight from the central star. The overview preserves the published planet order, separates the inner and outer system, and opens at a fitted camera distance. Survey Light can reveal terrain on the night side without changing game lighting.
 
-Toril uses an attributed GIS-derived surface, elevation and geography. The World Map tab supports panning, zooming, settlement/region search and GM party placement. Detailed vector shorelines, lakes, forests and rivers appear at close zooms. The dataset includes 1,024 named settlements.
+The Tears of Selune and Rock of Bral can be selected from the star map. **Toril & Moons** isolates the lunar system. The Tears trail Selune around Toril, and Bral occupies an authored slot among them. Bral's close-up includes its city, docks, Lake Bral, Starhaven and underside farms; the layout is an original interpretation.
+
+Toril uses an attributed GIS-derived surface, elevation and geography. The World Map tab supports panning, zooming, settlement/region search and GM party placement. The illustrated atlas uses shaded terrain at world scale, 128 detail tiles, and textured vector cartography at regional scale. Original painted mountain and forest symbols follow the elevation and land-cover data. City and region labels change with zoom; clicking a name or continent shortcut opens that area. Coastlines and rivers remain sharp at close zooms. The dataset includes 1,024 named settlements.
 
 The first click on Regional Map opens a Scene UUID form with a scene-browser button. It never chooses a campaign scene automatically. Link a world scene and optionally follow an existing token as the party marker. A regional atlas marker can also be placed without moving any scene token. Open Scene views the linked scene for the current user; it does not activate it for everyone.
 
@@ -61,3 +63,5 @@ Package `module.json`, `scripts`, `styles`, `assets` and `LICENSE` at the ZIP ro
 Original code and procedural planetary artwork are MIT licensed. Three.js retains its MIT notice. Derived Toril map assets have separate noncommercial fan-content terms in `assets/toril/NOTICE.md`. No protected calendar/adventure code or the user's regional map is redistributed. Forgotten Realms names and lore belong to their respective owners.
 
 The nebula background was generated with the built-in image tool. Its prompt and saved asset are recorded in [art notes](docs/atlas-art.md). Official and fan maps were inspected as references; their images are not bundled.
+
+Rebuild the illustrated atlas with `npm run build:cartography`. Its offline build requires Pillow, NumPy, SciPy, Shapely and ContourPy. The generated assets ship with the module, so players need no Python dependencies.

@@ -115,3 +115,33 @@ The official 2022 *Spelljammer Academy* chart continues to draw Toril as the thi
 The supplied [Adam Whitehead article](https://atlasoficeandfireblog.wordpress.com/2023/12/30/a-new-world-map-of-toril-2023/) and [Realmspace illustration](https://atlasoficeandfireblog.wordpress.com/wp-content/uploads/2023/12/realmspace-2023.png) are useful fan cartography. The article's main world map explicitly depicts 1372 DR and discusses uncertainty in later geography; it is not an official 1502 DR ephemeris. Use its composition and compare its celestial-body order against the official chart. Do not infer current binary-planet physics from the historical name Abeir-Toril.
 
 Implementation consequence: keep the normal heliocentric display's eight planetary bodies. If Abeir is later shown, an optional translucent counterpart or a separate dimensional view would communicate the lore better than a physical neighboring globe. A binary arrangement can be a deliberate campaign override, but should not be labeled the verified post-Sundering default. Exact spatial overlap, orbital offset, and the rules for what an observer on Abeir sees remain underspecified by the sources inspected.
+
+## Tears of Selune and the Rock of Bral in 3D
+
+The Tears orbit Toril behind Selune. They are hundreds of asteroids, rather than nine additional moons or a ring around the moon. Older *Realmspace* data puts their Toril distance near the moon's 183,000-mile orbital radius and their distance from Selune at roughly 100,000–183,000 miles. Ground observers usually distinguish nine points, with the first rising about four hours after moonrise. [Tears of Selune](https://forgottenrealms.fandom.com/wiki/Tears_of_Sel%C3%BBne)
+
+Those spatial figures, rounded orbital periods, and sky-visibility descriptions do not provide a complete consistent ephemeris. For the atlas, use an irregular trailing arc around Toril, with modest radial and vertical scatter, rotating with the lunar group. Individual rock spin is decorative. Keep a clear gap behind Selune and do not fill an entire Saturn-like ring. Show dozens or hundreds of small rocks on close approach; retain the nine-point motif only for the compact ground-sky display. These are explicit visualization choices, not exact canonical coordinates.
+
+### Bral's location is a campaign choice with published precedent
+
+The original *Rock of Bral*, SJR5, deliberately leaves its location flexible. Its introduction specifically suggests the Tears of Selune or the Rings of Glyth for a Realmspace campaign. The text was directly inspected in the publisher/store preview, PDF page 2. [SJR5 primary-source preview](https://d1vzi28wh99zvq.cloudfront.net/pdf_previews/17264-sample.pdf)
+
+The wiki also traces a definite Tears placement to *Faiths & Avatars*, page 170, and *Lands of Intrigue: Tethyr*, page 86, while explaining the broader setting's variable placement. [Rock of Bral, location note and references](https://forgottenrealms.fandom.com/wiki/Rock_of_Bral#Notes) The 5e *Astral Adventurer's Guide* likewise allows campaign placement in its introduction, according to indexed excerpts, but the official book page redirected to the shop during this check. The directly verified SJR5 instruction is sufficient to support this campaign's choice; do not claim that 5e fixes one universal Bral orbit.
+
+Place Bral as one named member of the Tears with a persistent, selectable marker. Its exact slot within the cluster is an authored campaign coordinate. It needs neither a new solar orbit nor a second moon-sized mesh. At realistic scale, a city-bearing rock would be invisible in a system overview, so use a marker and a dedicated close-up camera rather than silently depicting it as planet-sized.
+
+### Shape and city silhouette
+
+The traditional rock is approximately 1 mile long, 0.5 mile wide, and 0.5 mile thick, with an irregular oval form and a gravity plane through its middle. [Rock of Bral, description](https://forgottenrealms.fandom.com/wiki/Rock_of_Bral#Description)
+
+The official 2022 D&D Beyond primer confirms the city on the upper face, with crops and military facilities on the underside. Docks occupy the leading end; the High City and Starhaven occupy the trailing end, overlooking Lake Bral. The center contains the commercial Middle City, and tunnels run through the asteroid. [Official Bral primer](https://www.dndbeyond.com/posts/1302-welcome-to-bral-a-primer-on-spelljammers-asteroid)
+
+Useful visual reference is the [official city illustration](https://www.dndbeyond.com/attachments/9/987/city-of-bral.jpg). Reference the composition when making an original mesh; do not package the illustration as newly licensed module art. Sculpt a rough brown-gray asteroid with a settled upper shelf, a densely packed building silhouette, a visible lake, projecting docks, and a lower agricultural/military shelf. Preserve a rocky side profile so rotating the model makes its two usable faces clear. Tiny docked ships and window lights can convey scale. Specific building placement outside an inspected city map is artistic interpretation.
+
+## Better optional campaign map
+
+Mike Schley now sells the **Faerun Atlas: 2025**, originally commissioned for *Heroes of Faerun*. The artist's listing specifies a 48,000 × 34,200-pixel version, with DM, text-free, unlabeled, print, and VTT variants. This supersedes the earlier assumption that his only readily available atlas covers the northwest Sword Coast. [Artist's product page](https://prints.mikeschley.com/p858006957/h4cf6d1ee)
+
+This is the strongest verified high-detail optional raster source for a purchased private campaign atlas. The listing expressly offers VTT variants; no public redistribution or general derivative-work license was established. Let a GM select their licensed copy from campaign storage. Do not fetch an unlicensed full-resolution copy, bundle it in GitHub releases, or treat its regional projection as a Toril globe texture. The thumbnail metadata of 1818 × 1296 on the storefront describes the preview, not the purchased master. No purchase was made during this research.
+
+Continue using the documented Toril GIS geometry for the module's own cartography. A separate licensed-map setting can support the Schley artwork without replacing the original, redistributable rendering path. No new creator-permitted complete Toril satellite texture was verified in this pass.

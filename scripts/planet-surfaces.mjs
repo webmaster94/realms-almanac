@@ -1,9 +1,10 @@
 import * as T from './vendor/three.mjs';
+import {buildBral,buildTears} from './satellite-models.mjs';
 
 const fract=x=>x-Math.floor(x);
 const hash=(x,y=0,z=0)=>fract(Math.sin(x*127.1+y*311.7+z*74.7)*43758.5453);
 function noise(x,y,z){const ix=Math.floor(x),iy=Math.floor(y),iz=Math.floor(z);let a=x-ix,b=y-iy,c=z-iz;a=a*a*(3-2*a);b=b*b*(3-2*b);c=c*c*(3-2*c);const mix=(a,b,t)=>a+(b-a)*t;return mix(mix(mix(hash(ix,iy,iz),hash(ix+1,iy,iz),a),mix(hash(ix,iy+1,iz),hash(ix+1,iy+1,iz),a),b),mix(mix(hash(ix,iy,iz+1),hash(ix+1,iy,iz+1),a),mix(hash(ix,iy+1,iz+1),hash(ix+1,iy+1,iz+1),a),b),c);}
-const sizes={anadia:3.4,coliar:7,toril:5.4,karpri:5,chandos:5.2,glyth:5.5,garden:6,hcatha:5.6,selune:1.5,amaunator:12};
+const sizes={anadia:3.4,coliar:7,toril:5.4,karpri:5,chandos:5.2,glyth:5.5,garden:6,hcatha:5.6,selune:1.5,amaunator:12,tears:10,bral:10};
 export const bodySize=id=>sizes[id]??4;
 const cache=new Map();
 function canvas(w,h=w){const c=document.createElement('canvas');c.width=w;c.height=h;return c;}
@@ -84,7 +85,8 @@ async function cloudLayer(radius){
 }
 export async function createBody(id,{detail=false}={}){
   const radius=bodySize(id),root=id==='amaunator'?sun(radius,detail):new T.Group();root.userData.bodyId=id;root.userData.radius=radius;
-  if(id==='garden')await garden(root,detail);
+  if(id==='bral'||id==='tears'){const s=await surface('selune',detail);(id==='bral'?buildBral:buildTears)(root,{detail,map:s.map,bumpMap:s.bumpMap});}
+  else if(id==='garden')await garden(root,detail);
   else if(id==='hcatha')await hcatha(root,radius,detail);
   else if(id!=='amaunator'){
     const s=await surface(id,detail),relief=id==='coliar'?.0005:id==='selune'?.007:id==='anadia'?.008:.008;
@@ -105,7 +107,7 @@ export async function createBody(id,{detail=false}={}){
       const ring=new T.Mesh(g,material);ring.customDepthMaterial=new T.MeshDepthMaterial({map,alphaTest:.3,depthPacking:T.RGBADepthPacking,side:T.DoubleSide});ring.rotation.x=Math.PI/2-.3;root.add(ring);
     }
   }
-  root.traverse(o=>{if(o.isMesh){const translucent=o.material?.transparent&&!o.material?.alphaTest;o.castShadow=id!=='amaunator'&&!translucent;o.receiveShadow=!translucent;o.userData.bodyId=id;}});return root;
+  root.traverse(o=>{if(o.isMesh){const translucent=o.material?.transparent&&!o.material?.alphaTest;o.castShadow=id!=='amaunator'&&!translucent;o.receiveShadow=!translucent;o.userData.bodyId??=id;}});return root;
 }
 export function setBodyLight(body,direction){body.traverse(o=>{if(o.material?.uniforms?.sunDirection)o.material.uniforms.sunDirection.value.copy(direction);if(o.material?.userData.sunDirection)o.material.userData.sunDirection.copy(direction);});}
 export function disposeBody(root){const seen=new Set();root.traverse(o=>{o.geometry?.dispose();o.customDepthMaterial?.dispose();const materials=Array.isArray(o.material)?o.material:[o.material];for(const m of materials){if(!m||seen.has(m))continue;seen.add(m);for(const t of [m.map,m.bumpMap,m.roughnessMap,m.alphaMap])if(t&&!t.userData.atlasShared)t.dispose();m.dispose();}});}

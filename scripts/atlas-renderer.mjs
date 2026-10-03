@@ -3,6 +3,7 @@ import {createBody,bodySize,disposeBody,clearSurfaces,setBodyLight} from './plan
 import {orbitPositions,globeVector,vectorLatLon,atlasState} from './atlas-state.mjs';
 import {elapsedRealmsDays} from './planets.mjs';
 import {config} from './engine.mjs';
+import {lunarPositions,LUNAR_RADIUS} from './satellites.mjs';
 
 export class AtlasRenderer {
   constructor(host,read,{onSelect,onPosition}){
@@ -25,11 +26,12 @@ export class AtlasRenderer {
   snapshot(){const w=this.read();return {w,positions:orbitPositions(elapsedRealmsDays(w.date.year,w.c.day,w.c.hour,w.c.minute),config().planetAngles??{})};}
   async build(){
     const sky=await new T.TextureLoader().loadAsync('modules/realms-almanac/assets/planets/realmspace-nebula.png');if(!this.alive){sky.dispose();return;}sky.colorSpace=T.SRGBColorSpace;this.skyTexture=sky;this.system.background=sky;this.focusScene.background=sky;
-    const {positions}=this.snapshot();const ids=['amaunator',...positions.map(p=>p.id),'selune'];
-    for(const id of ids){const body=await createBody(id);if(!this.alive){disposeBody(body);return;}body.scale.setScalar(id==='selune'?2:2.6);this.bodies.set(id,body);this.system.add(body);
-      const label=document.createElement('button');label.type='button';label.className='ra-orbit-label';label.textContent=id==='amaunator'?'Amaunator':id==='selune'?'Selûne':positions.find(p=>p.id===id).name;label.addEventListener('click',()=>this.onSelect(id));label.dataset.body=id;this.labels.append(label);
+    const {positions}=this.snapshot();const ids=['amaunator',...positions.map(p=>p.id),'selune','tears','bral'];this.expectedBodies=ids.length;
+    for(const id of ids){const body=await createBody(id);if(!this.alive){disposeBody(body);return;}body.scale.setScalar(id==='selune'?2:id==='tears'?1:id==='bral'?.16:2.6);this.bodies.set(id,body);this.system.add(body);
+      const label=document.createElement('button');label.type='button';label.className='ra-orbit-label';label.textContent=({amaunator:'Amaunator',selune:'Selûne',tears:'Tears of Selûne',bral:'Rock of Bral'})[id]??positions.find(p=>p.id===id).name;label.addEventListener('click',()=>this.onSelect(id));label.dataset.body=id;this.labels.append(label);
     }
-    for(const p of positions){const pts=Array.from({length:257},(_,i)=>new T.Vector3(Math.cos(i/256*Math.PI*2)*p.orbit,0,Math.sin(i/256*Math.PI*2)*p.orbit));const line=new T.Line(new T.BufferGeometry().setFromPoints(pts),new T.LineBasicMaterial({color:p.id==='toril'?0xb9aa76:0x829bb1,transparent:true,opacity:p.id==='toril'?.78:.4}));this.system.add(line);}
+    for(const p of positions){const pts=Array.from({length:257},(_,i)=>new T.Vector3(Math.cos(i/256*Math.PI*2)*p.orbit,0,Math.sin(i/256*Math.PI*2)*p.orbit));const line=new T.Line(new T.BufferGeometry().setFromPoints(pts),new T.LineBasicMaterial({color:p.id==='toril'?0xb9aa76:0x829bb1,transparent:true,opacity:p.id==='toril'?.78:.4}));line.userData.solarOrbit=true;this.system.add(line);}
+    this.lunarOrbit=new T.LineLoop(new T.BufferGeometry().setFromPoints(Array.from({length:128},(_,i)=>new T.Vector3(Math.cos(i/128*Math.PI*2)*LUNAR_RADIUS,0,Math.sin(i/128*Math.PI*2)*LUNAR_RADIUS))),new T.LineBasicMaterial({color:0xaabccc,transparent:true,opacity:.38}));this.system.add(this.lunarOrbit);
     this.update();this.home();this.host.classList.add('ready');
   }
   addSky(scene){
@@ -44,31 +46,37 @@ export class AtlasRenderer {
     const offset=this.mode==='system'?(this.camera.view?.offsetY??0)/(this.camera.view?.fullHeight??r.height):0;
     this.renderer.setSize(r.width,r.height,false);this.camera.aspect=r.width/r.height;this.sidebarWidth=(this.host.parentElement.querySelector('.ra-body-sidebar')?.offsetWidth??190)+32;
     this.camera.setViewOffset(r.width,r.height,-this.sidebarWidth/2,offset*r.height,r.width,r.height);this.camera.updateProjectionMatrix();
-    if(this.overviewPending&&this.bodies.size===10){this.overviewPending=false;this.home();}
+    if(this.overviewPending&&this.expectedBodies&&this.bodies.size===this.expectedBodies){this.overviewPending=false;this.home();}
   }
   rotateToril(body,p,w){const party=atlasState().party,lon=(party?.lon??0)*Math.PI/180;body.rotation.y=-lon-p.angle-Math.PI+(w.hour-12)/24*2*Math.PI;}
   update(){if(!this.alive)return;const {w,positions}=this.snapshot();this.positions=positions;
     for(const p of positions){const body=this.bodies.get(p.id);if(!body)continue;body.position.set(p.x,0,p.z);setBodyLight(body,new T.Vector3(-p.x,0,-p.z).normalize());if(p.id==='toril')this.rotateToril(body,p,w);if(p.id==='hcatha')body.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),new T.Vector3(-p.x,0,-p.z).normalize());}
-    const toril=positions.find(p=>p.id==='toril'),moon=this.bodies.get('selune');if(moon){const a=toril.angle+(w.phase?.q??0)*Math.PI*2;moon.position.set(toril.x+Math.cos(a)*24,0,toril.z+Math.sin(a)*24);}
+    const toril=positions.find(p=>p.id==='toril'),lunar=lunarPositions(toril,w.phase?.q??0),moon=this.bodies.get('selune');if(moon)moon.position.set(lunar.moon.x,0,lunar.moon.z);
+    const tears=this.bodies.get('tears'),bral=this.bodies.get('bral');if(tears){tears.position.set(toril.x,0,toril.z);tears.rotation.y=-lunar.angle;tears.userData.labelPosition=new T.Vector3(lunar.tears.x,0,lunar.tears.z);}if(bral)bral.position.set(lunar.bral.x,0,lunar.bral.z);this.lunarOrbit?.position.set(toril.x,0,toril.z);
+    if(this.localOrbit){const center=new T.Vector3(toril.x,0,toril.z),delta=center.clone().sub(this.localCenter);this.camera.position.add(delta);this.controls.target.add(delta);this.localCenter.copy(center);}
     if(this.focusBody){const p=positions.find(p=>p.id===this.selected)??positions.find(p=>p.id==='toril');const sun=new T.Vector3(-p.x,0,-p.z).normalize();setBodyLight(this.focusBody,sun);this.focusLight.position.copy(sun.multiplyScalar(30));
       if(this.selected==='toril')this.rotateToril(this.focusBody,p,w);
       // Inspect the disc in a body-aligned frame. Its normal and illumination
       // remain aligned with the sun, just as in the system view.
       if(this.selected==='hcatha'){this.focusBody.quaternion.identity();this.focusLight.position.set(0,30,0);}
+      if(this.selected==='bral'){this.focusBody.quaternion.identity();this.focusLight.position.set(-22,26,16);}
+      if(this.selected==='tears')this.focusBody.rotation.y=-lunar.angle;
       this.updateMarker();
     }
     const torilLabel=this.labels.querySelector('[data-body="toril"]');if(torilLabel)torilLabel.textContent=atlasState().party?'Toril · Party':'Toril';
   }
   async focus(id){await this.ready;if(!this.alive)return;const sequence=++this.sequence;this.selected=id;
+    this.localOrbit=false;
     const body=await createBody(id,{detail:true});if(!this.alive||sequence!==this.sequence){disposeBody(body);return;}
     if(this.focusBody){this.focusScene.remove(this.focusBody);disposeBody(this.focusBody);this.partyMarker=null;}
     this.focusBody=body;this.focusScene.add(body);this.mode='focus';this.labels.hidden=true;this.controls.target.set(0,0,0);this.camera.fov=45;this.resize();
     const r=bodySize(id)*(id==='glyth'?2.15:id==='garden'?1.25:1);this.controls.minDistance=r*1.12;this.controls.maxDistance=r*14;this.update();
-    const view=id==='hcatha'?new T.Vector3(.3,.7,1):this.focusLight.position.clone().normalize().applyAxisAngle(new T.Vector3(0,1,0),.85);if(id!=='hcatha')view.y+=id==='glyth'?1.05:.4;this.camera.position.copy(view.normalize().multiplyScalar(r*3.45));this.controls.update();
+    const view=id==='hcatha'||id==='bral'?new T.Vector3(.65,.9,1):this.focusLight.position.clone().normalize().applyAxisAngle(new T.Vector3(0,1,0),.85);if(id==='bral')view.applyQuaternion(body.quaternion);if(!['hcatha','bral'].includes(id))view.y+=id==='glyth'||id==='tears'?1.05:.4;this.camera.position.copy(view.normalize().multiplyScalar(r*(id==='tears'?4.8:3.45)));this.controls.update();
     this.draw();
   }
   home(){
     if(!this.host.clientWidth||!this.host.clientHeight){this.overviewPending=true;return;}this.overviewPending=false;
+    this.localOrbit=false;this.systemVisibility(false);
     this.sequence++;this.mode='system';this.selected=null;this.labels.hidden=false;this.controls.target.set(0,0,0);this.controls.minDistance=60;this.controls.maxDistance=3500;this.camera.fov=28;this.resize();
     const width=this.host.clientWidth,height=this.host.clientHeight,halfWidth=Math.max(120,(width-this.sidebarWidth-65)/2),halfHeight=Math.max(100,(height-100)/2),direction=new T.Vector3(0,.46,.888).normalize();
     this.camera.setViewOffset(width,height,-this.sidebarWidth/2,0,width,height);
@@ -83,6 +91,8 @@ export class AtlasRenderer {
     let low=520,high=3500;for(let i=0;i<16;i++){const mid=(low+high)/2;if(measure(mid).extent>1)low=mid;else high=mid;}
     const frame=measure(high);this.camera.setViewOffset(width,height,-this.sidebarWidth/2,-frame.midY*height/2,width,height);this.controls.update();this.update();this.draw();
   }
+  systemVisibility(lunarOnly){for(const [id,body]of this.bodies)body.visible=!lunarOnly||['toril','selune','tears','bral'].includes(id);for(const child of this.system.children)if(child.userData.solarOrbit)child.visible=!lunarOnly;}
+  async torilSystem(){await this.ready;if(!this.alive)return;this.sequence++;this.mode='system';this.selected=null;this.localOrbit=true;this.systemVisibility(true);const p=this.positions.find(p=>p.id==='toril');this.localCenter=new T.Vector3(p.x,0,p.z);this.controls.target.copy(this.localCenter);this.camera.fov=45;this.camera.setViewOffset(this.host.clientWidth,this.host.clientHeight,-this.sidebarWidth/2,0,this.host.clientWidth,this.host.clientHeight);this.camera.position.copy(this.localCenter).add(new T.Vector3(0,45,76));this.controls.minDistance=25;this.controls.maxDistance=1600;this.labels.hidden=false;this.controls.update();this.draw();}
   setSurvey(value){this.survey=value;this.focusAmbient.intensity=value?1.15:.3;this.systemAmbient.intensity=value?1.3:.85;}
   updateMarker(){if(this.selected!=='toril'||!this.focusBody)return;const party=atlasState().party;
     if(!this.partyMarker){this.partyMarker=new T.Mesh(new T.SphereGeometry(.07,12,8),new T.MeshBasicMaterial({color:0xffd678}));this.partyMarker.userData.partyMarker=true;this.focusBody.add(this.partyMarker);}
@@ -92,9 +102,9 @@ export class AtlasRenderer {
   findParty(){if(this.selected!=='toril'||!atlasState().party)return;const p=atlasState().party;this.focusBody.updateMatrixWorld(true);const v=new T.Vector3(...globeVector(p.lat,p.lon,1)).applyQuaternion(this.focusBody.quaternion);this.controls.target.set(0,0,0);this.camera.position.copy(v.multiplyScalar(bodySize('toril')*3.1));this.controls.update();}
   setPlacement(enabled){this.placing=enabled;this.renderer.domElement.classList.toggle('placing',enabled);}
   pick(event){if(!this.startPointer||Math.hypot(event.clientX-this.startPointer[0],event.clientY-this.startPointer[1])>5)return;const r=this.renderer.domElement.getBoundingClientRect();this.pointer.set((event.clientX-r.left)/r.width*2-1,-(event.clientY-r.top)/r.height*2+1);this.raycaster.setFromCamera(this.pointer,this.camera);
-    const objects=this.mode==='system'?[...this.bodies.values()]:[this.focusBody];const hits=this.raycaster.intersectObjects(objects.filter(Boolean),true).filter(h=>h.object.isMesh&&!h.object.material?.transparent&&!h.object.userData.partyMarker);
+    const objects=this.mode==='system'?[...this.bodies.values()].filter(b=>b.visible):[this.focusBody];const hits=this.raycaster.intersectObjects(objects.filter(Boolean),true).filter(h=>h.object.isMesh&&!h.object.material?.transparent&&!h.object.userData.partyMarker);
     if(!hits.length)return;const hit=hits[0];if(this.placing&&this.selected==='toril'&&this.mode==='focus'){const local=this.focusBody.worldToLocal(hit.point.clone());this.onPosition(vectorLatLon(local.x,local.y,local.z));return;}
-    if(this.mode==='system')this.onSelect(hit.object.userData.bodyId);
+    if(this.mode==='system'||(this.selected==='tears'&&hit.object.userData.bodyId==='bral'))this.onSelect(hit.object.userData.bodyId);
   }
   animate(time){if(!this.alive)return;this.frame=requestAnimationFrame(t=>this.animate(t));if(!this.visible||document.hidden||time-(this.lastFrame??0)<30)return;this.lastFrame=time;
     this.controls.update();for(const b of [this.bodies.get('amaunator'),this.focusBody])if(b?.userData.sunMaterial)b.userData.sunMaterial.uniforms.time.value=time/1000;
@@ -102,7 +112,7 @@ export class AtlasRenderer {
     this.draw();
   }
   draw(){if(!this.alive)return;this.renderer.render(this.mode==='system'?this.system:this.focusScene,this.camera);
-    if(this.mode==='system'){const occupied=[];for(const label of this.labels.children){const b=this.bodies.get(label.dataset.body);if(!b)continue;const p=b.position.clone().add(new T.Vector3(0,bodySize(label.dataset.body)*2.6+4,0)).project(this.camera);label.hidden=p.z>1||p.z< -1;let x=(p.x*.5+.5)*this.host.clientWidth,y=(-p.y*.5+.5)*this.host.clientHeight;const width=label.textContent.length*6+14;for(let i=0;i<4&&occupied.some(b=>Math.abs(x-b.x)<(width+b.w)/2&&Math.abs(y-b.y)<18);i++)y-=18;occupied.push({x,y,w:width});label.style.left=`${x}px`;label.style.top=`${y}px`;}}
+    if(this.mode==='system'){const occupied=[];for(const label of this.labels.children){const b=this.bodies.get(label.dataset.body);if(!b)continue;if(!b.visible){label.hidden=true;continue;}const offset=['tears','bral'].includes(label.dataset.body)?2.5:bodySize(label.dataset.body)*b.scale.x+4;const p=(b.userData.labelPosition??b.position).clone().add(new T.Vector3(0,offset,0)).project(this.camera);label.hidden=p.z>1||p.z< -1||Math.abs(p.x)>1||Math.abs(p.y)>1;if(label.hidden)continue;let x=(p.x*.5+.5)*this.host.clientWidth,y=(-p.y*.5+.5)*this.host.clientHeight;const width=label.textContent.length*6+14;for(let i=0;i<12&&occupied.some(b=>Math.abs(x-b.x)<(width+b.w)/2+5&&Math.abs(y-b.y)<20);i++){y-=20;if(y<30){y+=100;x+=width*.65;}}occupied.push({x,y,w:width});label.style.left=`${x}px`;label.style.top=`${y}px`;}}
   }
   dispose(){this.alive=false;this.sequence++;cancelAnimationFrame(this.frame);this.resizeObserver.disconnect();this.controls.dispose();this.renderer.domElement.removeEventListener('pointerdown',this.down);this.renderer.domElement.removeEventListener('pointerup',this.up);
     for(const scene of [this.system,this.focusScene])disposeBody(scene);this.skyTexture?.dispose();this.renderer.dispose();this.renderer.forceContextLoss();this.host.replaceChildren();this.bodies.clear();this.focusBody=null;this.partyMarker=null;clearSurfaces();
