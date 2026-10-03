@@ -62,6 +62,25 @@ def warp(image,calibration,maxwidth=7800):
         mask=np.zeros((y1-y0,x1-x0),np.uint8);cv2.fillConvexPoly(mask,np.round(local).astype(np.int32),255);targetview=result[y0:y1,x0:x1];targetview[mask>0]=patch[mask>0]
     return Image.fromarray(result),dict(west=float(west),east=float(east),north=float(north),south=float(south))
 
+def crop_calibration(calibration,box,size):
+    """Clip the existing mesh, retaining the same coordinate field for a detail crop."""
+    vertices=[];triangles=[];left,top,right,bottom=box;w,h=size
+    for ids in calibration['triangles']:
+        poly=[np.array(calibration['vertices'][i],float) for i in ids]
+        for axis,bound,greater in [(0,left,True),(0,right,False),(1,top,True),(1,bottom,False)]:
+            clipped=[]
+            for previous,current in zip(poly[-1:]+poly[:-1],poly):
+                pin=previous[axis]>=bound if greater else previous[axis]<=bound;cin=current[axis]>=bound if greater else current[axis]<=bound
+                if pin!=cin:clipped.append(previous+(current-previous)*(bound-previous[axis])/(current[axis]-previous[axis]))
+                if cin:clipped.append(current)
+            poly=clipped
+            if not poly:break
+        if len(poly)<3:continue
+        start=len(vertices)
+        vertices.extend([[(p[0]-left)/(right-left)*w,(p[1]-top)/(bottom-top)*h,p[2],p[3]] for p in poly])
+        triangles.extend([[start,start+i,start+i+1] for i in range(1,len(poly)-1)])
+    return dict(vertices=vertices,triangles=triangles)
+
 def pyramid(image,id,**metadata):
     w,h=image.size;signature=hashlib.sha256(image.tobytes()).hexdigest();cache=OUT/f'{id}-build.json'
     if cache.exists():
@@ -85,12 +104,16 @@ def main():
     base=Image.open(ROOT/'qa/painted-atlas/toril-painted.png')
     layers.append(pyramid(base,'toril-painted',bounds=dict(west=-180,east=180,south=-90,north=90),credit='Toril / Geospatial Grimoire / Illustrated Terrain'))
     faerun=feather_edges(Image.open(ROOT/'qa/painted-atlas/faerun-painted-assembled.png'),inset=0,feather=160);layers.append(pyramid(faerun,'faerun-painted',bounds=dict(west=-89.8842217865,east=-14.2757686072,south=3.5537424058,north=55.3290212766),minZoom=2,fadeZoom=1,credit='Faerun / Adam Whitehead Geography / Illustrated Terrain'))
-    sc=feather_edges(Image.open(SRC/'sword-coast-2015-georeferenced.tif'),inset=60,feather=700);layers.append(pyramid(sc,'sword-coast',bounds=dict(west=-92.7075326581926,east=-50.7857741673,south=28.9004668498,north=53.97731579125734),minZoom=8,fadeZoom=6,credit='Sword Coast · Mike Schley / Wizards of the Coast',replaceLabels=True))
-    ice=read('icewind-calibration.json');a,b,c=ice['pixelToWorldAffine'][0];d,e,f=ice['pixelToWorldAffine'][1];ic=dict(affine=[a,b,c-(a+b)/2,d,e,f-(d+e)/2]);im,bounds=warp(feather_edges(Image.open(SRC/'icewind-dale-player-official.jpg'),inset=100),ic,6000)
-    ilabels=[dict(name=p['name'],lon=p['lon'],lat=p['lat'],x=p['x']+.5,y=p['y']+.5,kind='City',rank=1,minZoom=60) for p in ice['towns']]
-    layers.append(pyramid(im,'icewind',bounds=bounds,minZoom=36,fadeZoom=14,labels=ilabels,replaceLabels=True,credit='Icewind Dale · Wizards of the Coast · Approximate Alignment'))
+    quality=ROOT/'qa/quality-pass';sc_labels=json.loads((quality/'sword-source-labels.json').read_text())
+    sc=feather_edges(Image.open(SRC/'sword-coast-2015-georeferenced.tif'),inset=12,feather=140);layers.append(pyramid(sc,'sword-coast',bounds=dict(west=-92.7075326581926,east=-50.7857741673,south=28.9004668498,north=53.97731579125734),minZoom=8,fadeZoom=6,credit='Sword Coast · Mike Schley / Wizards of the Coast',replaceLabels=True,labels=sc_labels))
+    ice=read('icewind-calibration.json');im=feather_edges(Image.open(quality/'icewind-autumn-final.png'),inset=0,feather=190);bounds=json.loads((quality/'icewind-new-bounds.json').read_text())
+    ilabels=[dict(name=p['name'],lon=p['lon'],lat=p['lat'],x=p['x']+.5,y=p['y']+.5,kind='City',rank=1,minZoom=110) for p in ice['towns']]
+    layers.append(pyramid(im,'icewind-autumn',bounds=bounds,minZoom=36,fadeZoom=14,requireFullView=True,labels=ilabels,replaceLabels=True,credit='Icewind Dale · Registered Geography · Autumn Terrain Restoration'))
     clean=Image.open(SRC/'thay-clean-final.png');native=[dict(p,minZoom=p.get('nativeMinZoom',1)) for p in labels];regional.append(pyramid(clean,'thay-native',labels=native,credit='Thay · Rob McCaleb · Terrain Recovered From Original Map'))
     im,bounds=warp(feather_edges(clean,inset=50),calibration,7200);layers.append(pyramid(im,'thay',bounds=bounds,minZoom=13,fadeZoom=5,labels=labels,replaceLabels=True,credit='Thay · Rob McCaleb · Calibrated Regional Detail'))
+    detail=feather_edges(Image.open(quality/'eltabbar-detail-registered.png'),inset=0,feather=130);box=[4300,3100,4850,3600]
+    regional[0]['details']=[pyramid(detail,'eltabbar-native',bounds=dict(west=box[0]/7200,east=box[2]/7200,north=1-box[1]/7800,south=1-box[3]/7800),minZoom=8,fadeZoom=5,credit='Eltabbar · Illustrated Detail From Regional Geography')]
+    im,bounds=warp(detail,crop_calibration(calibration,box,detail.size),1600);layers.append(pyramid(im,'eltabbar-world',bounds=bounds,minZoom=140,fadeZoom=60,credit='Eltabbar · Illustrated Detail From Regional Geography'))
     manifest=dict(schemaVersion=1,layers=layers,regional=regional,continents=atlas['continents'],oceans=atlas['oceans'],destinations=[dict(name='Faerûn',lat=31,lon=-52,zoom=5),dict(name='Sword Coast',lat=43,lon=-74,zoom=15),dict(name='Icewind Dale',lat=53.18,lon=-77.25,zoom=200),dict(name='Thay',lat=35.18,lon=-36.05,zoom=75)])
     save('manifest.json',manifest)
 if __name__=='__main__':main()

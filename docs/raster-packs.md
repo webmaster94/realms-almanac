@@ -25,3 +25,9 @@ The Thay pack uses 14 measured settlement anchors plus four affine-estimated cor
 The private pack combines original detailed regional art with a painted world overview and a 4935 x 3380 Faerûn mosaic. The mosaic uses the registered blank map as its geometric guide and twelve overlapping generated sections. Coastlines, glaciers and major terrain boundaries were visually compared with the guide; fine added terrain is illustrative. Raw water-mask metrics can confuse blue glacier shadows, wetlands and removed map decorations and are not survey accuracy claims.
 
 Source maps and generated derivatives remain private campaign assets. They are not included in the public module or its release archive. See [source research](raster-atlas-research.md), [clean map research](clean-map-source-research.md), [Icewind Dale calibration](icewind-calibration-research.md) and [art prompts](atlas-art.md).
+
+## Detail transitions
+
+A regional source may contain `details`, an array of local raster layers. Their bounds use normalized regional image coordinates, with north equal to `1-v`. The renderer composites them over the native base image without changing the scene or token coordinate system. A world-detail crop uses the clipped parent calibration mesh, retaining the same transform along every shared edge.
+
+`requireFullView` keeps a world close-up layer hidden until its perimeter lies outside the viewport. The source fades in over a further ten-percent view margin. This prevents small maps with different drawing scales from appearing as isolated rectangular inserts. The source-native zoom limit applies to the highest-resolution layer under the view center. Labels from a printed source suppress displaced GIS labels as soon as source pixels become visible, including during loading and fades. `searchOnly` source anchors guide searches without adding a second label over printed artwork.

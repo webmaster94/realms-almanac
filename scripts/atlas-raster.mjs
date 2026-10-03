@@ -6,7 +6,7 @@ const intersects=(a,b)=>a.west<b.east&&a.east>b.west&&a.south<b.north&&a.north>b
 export class RasterAtlas extends AtlasMap {
   async loadPack(url,sourceId){
     this.packURL=new URL(url,location.href);this.pack=await loadRasterManifest(url);if(!this.alive)return;
-    this.sourceId=sourceId;this.layers=sourceId?[this.pack.regional.find(s=>s.id===sourceId)]:this.pack.layers;
+    this.sourceId=sourceId;const regional=sourceId?this.pack.regional.find(s=>s.id===sourceId):null;this.layers=sourceId?[regional,...(regional?.details??[])]:this.pack.layers;
     if(!this.layers?.length||this.layers.some(s=>!s))throw new Error('This map is not present in the campaign map pack.');
     this.image={width:sourceId?this.layers[0].width:3600,height:sourceId?this.layers[0].height:1800};
     this.data=await loadAtlasData();this.carto={continents:this.pack.continents??[],oceans:this.pack.oceans??[]};
@@ -14,22 +14,32 @@ export class RasterAtlas extends AtlasMap {
     this.nav?.replaceChildren();for(const place of this.pack.destinations??[]){const b=document.createElement('button');b.type='button';b.textContent=place.name;b.addEventListener('click',()=>this.focus(place.lat,place.lon,place.zoom));this.nav?.append(b);}
     this.host.classList.remove('loading');this.resize();
   }
-  zoomAt(factor,x,y){const before=this.uvAt(x,y);this.zoom=Math.max(1,Math.min(this.world?1024:32,this.zoom*factor));const after=this.uvAt(x,y);this.center.u+=before.u-after.u;this.center.v+=before.v-after.v;this.constrain();this.draw();}
-  focus(lat,lon,zoom=18){this.center=mapUV(lat,lon);this.zoom=Math.max(1,Math.min(1024,zoom));this.constrain();this.draw();}
+  detailZoomLimit(){
+    if(!this.image||!this.layers?.length)return 1;
+    const fit=Math.min(this.width/this.image.width,this.height/this.image.height);
+    if(!this.world){const u=this.center.u,v=1-this.center.v;return Math.max(1,...this.layers.filter(l=>!l.bounds||(u>=l.bounds.west&&u<=l.bounds.east&&v>=l.bounds.south&&v<=l.bounds.north)).map(l=>1.5*l.width/(fit*this.image.width*(l.bounds?l.bounds.east-l.bounds.west:1))));}
+    const lon=this.center.u*360-180,lat=90-this.center.v*180;
+    const layers=this.layers.filter(l=>lon>=l.bounds.west&&lon<=l.bounds.east&&lat>=l.bounds.south&&lat<=l.bounds.north);
+    return Math.max(1,...layers.map(l=>1.5*l.width/(fit*this.image.width*(l.bounds.east-l.bounds.west)/360)));
+  }
+  constrain(){super.constrain();if(this.image&&this.layers?.length)this.zoom=Math.min(this.zoom,this.detailZoomLimit());}
+  zoomAt(factor,x,y){const before=this.uvAt(x,y);this.zoom=Math.max(1,Math.min(this.detailZoomLimit(),this.zoom*factor));const after=this.uvAt(x,y);this.center.u+=before.u-after.u;this.center.v+=before.v-after.v;this.constrain();this.draw();}
+  focus(lat,lon,zoom=18){this.center=mapUV(lat,lon);this.zoom=Math.max(1,Math.min(this.detailZoomLimit(),zoom));this.constrain();this.draw();}
   findMarker(){if(!this.marker)return;this.center={u:this.marker.u,v:this.marker.v};this.zoom=this.world?110:3;this.constrain();this.draw();}
   entry(key,path){let e=this.tiles.get(key);if(!e){const image=new Image();e={image,ready:false,used:0};this.tiles.set(key,e);image.onload=()=>{if(!this.alive)return;e.ready=true;this.queueDraw();};image.onerror=()=>{e.failed=true;};image.src=new URL(path,this.packURL).href;}e.used=++this.tileUse;return e;}
   drawLayer(ctx,layer){
-    const size=this.imageSize(),b=this.world?layer.bounds:{west:0,east:1,south:0,north:1},nw=this.uvAt(0,0),se=this.uvAt(this.width,this.height);
+    const size=this.imageSize(),b=layer.bounds??{west:0,east:1,south:0,north:1},nw=this.uvAt(0,0),se=this.uvAt(this.width,this.height);
     const view=this.world?{west:nw.u*360-180,east:se.u*360-180,north:90-nw.v*180,south:90-se.v*180}:{west:nw.u,east:se.u,north:1-nw.v,south:1-se.v};
     if(!intersects(b,view)||this.zoom<(layer.minZoom??1))return false;
-    const u=this.world?(b.west+180)/360:0,v=this.world?(90-b.north)/180:0,origin=this.screen(u,v),dw=this.world?(b.east-b.west)/360*size.w:size.w,dh=this.world?(b.north-b.south)/180*size.h:size.h;
-    const alpha=layer.fadeZoom?Math.min(1,(this.zoom-(layer.minZoom??1))/layer.fadeZoom):1,target=ctx,dpr=Math.min(devicePixelRatio,2);this.layerCanvas??=document.createElement('canvas');const buffer=this.layerCanvas;if(buffer.width!==this.canvas.width||buffer.height!==this.canvas.height){buffer.width=this.canvas.width;buffer.height=this.canvas.height;}ctx=buffer.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,this.width,this.height);ctx.save();
-    const preview=this.entry(layer.id+'/preview',layer.preview);if(preview.ready)ctx.drawImage(preview.image,origin.x,origin.y,dw,dh);
+    let coverage=1;if(this.world&&layer.requireFullView){const vw=view.east-view.west,vh=view.north-view.south;const margin=Math.min((view.west-b.west)/vw,(b.east-view.east)/vw,(view.south-b.south)/vh,(b.north-view.north)/vh);coverage=Math.max(0,Math.min(1,margin/.1));coverage=coverage*coverage*(3-2*coverage);if(!coverage)return false;}
+    const u=this.world?(b.west+180)/360:b.west,v=this.world?(90-b.north)/180:1-b.north,origin=this.screen(u,v),dw=(b.east-b.west)/(this.world?360:1)*size.w,dh=(b.north-b.south)/(this.world?180:1)*size.h;
+    const alpha=coverage*(layer.fadeZoom?Math.min(1,(this.zoom-(layer.minZoom??1))/layer.fadeZoom):1),target=ctx,dpr=Math.min(devicePixelRatio,2);this.layerCanvas??=document.createElement('canvas');const buffer=this.layerCanvas;if(buffer.width!==this.canvas.width||buffer.height!==this.canvas.height){buffer.width=this.canvas.width;buffer.height=this.canvas.height;}ctx=buffer.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,this.width,this.height);ctx.save();
+    const preview=this.entry(layer.id+'/preview',layer.preview);let hasPixels=preview.ready;if(preview.ready)ctx.drawImage(preview.image,origin.x,origin.y,dw,dh);
     const desired=dw*Math.min(devicePixelRatio,2);const level=layer.levels.find(l=>l.width>=desired)??layer.levels.at(-1);
     // Draw progressively finer loaded levels; holes retain the preceding resolution.
     for(const l of layer.levels){if(l.width>level.width)break;const cols=Math.ceil(l.width/l.tileSize),rows=Math.ceil(l.height/l.tileSize),x0=Math.max(0,Math.floor(-origin.x/dw*l.width/l.tileSize)),x1=Math.min(cols-1,Math.floor((this.width-origin.x)/dw*l.width/l.tileSize)),y0=Math.max(0,Math.floor(-origin.y/dh*l.height/l.tileSize)),y1=Math.min(rows-1,Math.floor((this.height-origin.y)/dh*l.height/l.tileSize));
-      for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const path=l.template.replace('{x}',x).replace('{y}',y),entry=this.entry(layer.id+'/'+l.width+'/'+x+'/'+y,path);if(!entry.ready)continue;const tw=Math.min(l.tileSize,l.width-x*l.tileSize),th=Math.min(l.tileSize,l.height-y*l.tileSize),dx=Math.round((origin.x+x*l.tileSize/l.width*dw)*dpr)/dpr,dy=Math.round((origin.y+y*l.tileSize/l.height*dh)*dpr)/dpr,ex=Math.round((origin.x+(x*l.tileSize+tw)/l.width*dw)*dpr)/dpr,ey=Math.round((origin.y+(y*l.tileSize+th)/l.height*dh)*dpr)/dpr;ctx.clearRect(dx,dy,ex-dx,ey-dy);ctx.drawImage(entry.image,dx,dy,ex-dx,ey-dy);}}
-    ctx.restore();target.save();target.globalAlpha=alpha;target.drawImage(buffer,0,0,this.width,this.height);target.restore();return preview.ready&&alpha>.5;
+      for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const path=l.template.replace('{x}',x).replace('{y}',y),entry=this.entry(layer.id+'/'+l.width+'/'+x+'/'+y,path);if(!entry.ready)continue;hasPixels=true;const tw=Math.min(l.tileSize,l.width-x*l.tileSize),th=Math.min(l.tileSize,l.height-y*l.tileSize),dx=Math.round((origin.x+x*l.tileSize/l.width*dw)*dpr)/dpr,dy=Math.round((origin.y+y*l.tileSize/l.height*dh)*dpr)/dpr,ex=Math.round((origin.x+(x*l.tileSize+tw)/l.width*dw)*dpr)/dpr,ey=Math.round((origin.y+(y*l.tileSize+th)/l.height*dh)*dpr)/dpr;ctx.clearRect(dx,dy,ex-dx,ey-dy);ctx.drawImage(entry.image,dx,dy,ex-dx,ey-dy);}}
+    ctx.restore();target.save();target.globalAlpha=alpha;target.drawImage(buffer,0,0,this.width,this.height);target.restore();return hasPixels&&alpha>0;
   }
   labels(ctx){
     const active=this.activeLayers??[],inside=(p,l)=>p.lon>=l.bounds.west&&p.lon<=l.bounds.east&&p.lat>=l.bounds.south&&p.lat<=l.bounds.north;
@@ -37,7 +47,7 @@ export class RasterAtlas extends AtlasMap {
     let places=this.world?[...this.data.places.filter(p=>!names.has(p.name.toLowerCase())&&!active.some(l=>l.replaceLabels&&inside(p,l))),...overrides]:this.layers[0].labels??[];
     const occupied=this.world?[{x:0,y:0,w:315,h:55},{x:this.width-65,y:0,w:65,h:220},{x:this.width-200,y:this.height-88,w:200,h:88}]:[];if(this.marker){const p=this.screen(this.marker.u,this.marker.v);occupied.push({x:p.x-85,y:p.y-44,w:170,h:25});}this.hits=[];ctx.textBaseline='middle';ctx.textAlign='left';
     if(this.world&&this.zoom<3)places=[...this.carto.continents.map(p=>({...p,kind:'Continent',minZoom:1})),...this.carto.oceans.map(p=>({...p,kind:'Ocean',minZoom:1}))];
-    for(const p of [...places].sort((a,b)=>(a.rank??3)-(b.rank??3))){if(this.zoom<(p.minZoom??(this.world?6:1)))continue;const uv=this.world?mapUV(p.lat,p.lon):{u:p.x/this.image.width,v:p.y/this.image.height},s=this.screen(uv.u,uv.v);if(s.x<8||s.y<45||s.x>this.width-20||s.y>this.height-35)continue;
+    for(const p of [...places].sort((a,b)=>(a.rank??3)-(b.rank??3))){if(p.searchOnly||this.zoom<(p.minZoom??(this.world?6:1)))continue;const uv=this.world?mapUV(p.lat,p.lon):{u:p.x/this.image.width,v:p.y/this.image.height},s=this.screen(uv.u,uv.v);if(s.x<8||s.y<45||s.x>this.width-20||s.y>this.height-35)continue;
       const size=p.kind==='Continent'?21:p.kind==='City'?15:13;ctx.font=`${p.kind==='City'?'bold ':''}${size}px Georgia,serif`;const box={x:s.x+7,y:s.y-size/2-3,w:ctx.measureText(p.name).width+6,h:size+6};if(occupied.some(b=>box.x<b.x+b.w&&box.x+box.w>b.x&&box.y<b.y+b.h&&box.y+box.h>b.y))continue;occupied.push(box);this.hits.push({...box,place:p});
       if(!['Continent','Ocean','Region','River'].includes(p.kind)){ctx.beginPath();ctx.arc(s.x,s.y,p.kind==='City'?3.4:2.3,0,Math.PI*2);ctx.fillStyle='#302d27';ctx.fill();ctx.lineWidth=1.5;ctx.strokeStyle='#f6efd7';ctx.stroke();}ctx.lineJoin='round';ctx.lineWidth=3;ctx.strokeStyle='#f2e8cedd';ctx.strokeText(p.name,box.x,s.y);ctx.fillStyle='#292e27';ctx.fillText(p.name,box.x,s.y);
     }
