@@ -100,7 +100,7 @@ def pyramid(image,id,**metadata):
     layer=dict(id=id,width=w,height=h,preview=f'{id}-preview.webp',levels=levels,**metadata);save(f'{id}-build.json',dict(signature=signature,layer=layer));return layer
 
 def main():
-    calibration,labels=thay_calibration();atlas=json.loads((ROOT/'assets/toril/cartography.json').read_text());layers=[];regional=[]
+    calibration,labels=thay_calibration();atlas=json.loads((ROOT/'assets/toril/cartography.json').read_text(encoding='utf-8'));layers=[];regional=[]
     base=Image.open(ROOT/'qa/painted-atlas/toril-painted.png')
     layers.append(pyramid(base,'toril-painted',bounds=dict(west=-180,east=180,south=-90,north=90),credit='Toril / Geospatial Grimoire / Illustrated Terrain'))
     faerun=feather_edges(Image.open(ROOT/'qa/painted-atlas/faerun-painted-assembled.png'),inset=0,feather=160);layers.append(pyramid(faerun,'faerun-painted',bounds=dict(west=-89.8842217865,east=-14.2757686072,south=3.5537424058,north=55.3290212766),minZoom=2,fadeZoom=1,credit='Faerun / Adam Whitehead Geography / Illustrated Terrain'))

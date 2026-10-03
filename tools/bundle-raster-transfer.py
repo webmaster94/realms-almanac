@@ -2,7 +2,7 @@
 from pathlib import Path
 import json,base64,math,hashlib
 ROOT=Path(__file__).resolve().parents[1];src=ROOT/'qa/campaign-atlas';out=ROOT/'qa/painted-transfer';out.mkdir(exist_ok=True)
-manifest=json.loads((src/'manifest.json').read_text());names={'manifest.json','thay-calibration.json'}
+manifest=json.loads((src/'manifest.json').read_text(encoding='utf-8'));names={'manifest.json','thay-calibration.json'}
 for layer in manifest['layers']+manifest['regional']+[d for r in manifest['regional'] for d in r.get('details',[])]:
     names.add(layer['preview'])
     for level in layer['levels']:
