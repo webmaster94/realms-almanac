@@ -32,9 +32,9 @@ The planet-ring button opens a 3D cutaway of the Toril Crystal Sphere. Sphere Ex
 
 The Tears of Selune and Rock of Bral can be selected from the star map. **Toril & Moons** isolates the lunar system. The Tears trail Selune around Toril, and Bral occupies an authored slot among them. Bral's close-up includes its city, docks, Lake Bral, Starhaven and underside farms; the layout is an original interpretation.
 
-Toril uses an attributed GIS-derived surface, elevation and geography. The World Map supports panning, zooming, place search and GM party placement. Campaign map packs can add registered raster layers with several resolutions. The atlas loads visible tiles, retains a coarser image while detail arrives, and fades between map scales. Labels remain readable as the map zooms. Zoom stops at the available source detail, with finer local layers extending that limit where present. Sword Coast search anchors use measured printed settlement dots.
+Toril uses an attributed GIS-derived surface, elevation and geography. The World Map supports panning, zooming, place search and GM party placement. Continuous campaign packs use one registered tile grid, with every zoom level drawn from the same assembled map. Drawing and search share a stable catalog of settlements, countries, regions and bodies of water. Source detail controls the maximum zoom.
 
-The current private campaign pack includes a painted Faerûn mosaic, the detailed Sword Coast map, a snow-free Icewind Dale restoration and the cleaned Thay map with an additional Eltabbar detail layer. Generated terrain follows registered geographic guides in areas without detailed source art. These images are separate campaign assets, not part of the public module download. The Sword Coast retains its original printed labels. Thay and Icewind Dale use separate labels and measured settlement anchors.
+The current private campaign pack includes a 12,288 by 9,216 Faerûn mosaic and the original high-detail Thay map. Overlapping painted tiles join the northern and southern map areas into the same illustration. Thay retains its original settlements and printed names, with no generated city-detail insert. Its regional view uses lossless tiles of the complete original image. These campaign images are separate from the public module download.
 
 The first click on Regional Map opens a Scene UUID form with a scene-browser button. It never chooses a campaign scene automatically. Link a world scene and optionally follow an existing token as the party marker. A regional atlas marker can also be placed without moving any scene token. Open Scene views the linked scene for the current user; it does not activate it for everyone.
 
@@ -68,4 +68,4 @@ The nebula background was generated with the built-in image tool. Its prompt and
 
 Rebuild the illustrated atlas with `npm run build:cartography`. Its offline build requires Pillow, NumPy, SciPy, Shapely and ContourPy. The generated assets ship with the module, so players need no Python dependencies.
 
-Private raster packs are built with `tools/build-raster-pack.py`. It keeps source art and generated tiles under the ignored `qa` directory. See [raster pack format and calibration](docs/raster-packs.md) for setup and accuracy limits.
+Continuous private raster packs are built with `tools/stitch-atlas.py`, `tools/finish-atlas.py` and `tools/build-continuous-pack.py`. These tools keep source art and generated tiles under the ignored `qa` directory. See [raster pack format and calibration](docs/raster-packs.md) for setup and accuracy limits.

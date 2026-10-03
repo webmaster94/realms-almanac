@@ -1,5 +1,6 @@
 import {AtlasMap,loadAtlasData} from './atlas-map.mjs';
 import {mapUV} from './atlas-state.mjs';
+import {atlasCatalog,labelVisible,labelAppearance,tilePresent} from './atlas-labels.mjs';
 const manifests=new Map();
 export function loadRasterManifest(url){if(!manifests.has(url))manifests.set(url,fetch(url).then(r=>{if(!r.ok)throw new Error('The campaign map pack could not be loaded.');return r.json();}).catch(e=>{manifests.delete(url);throw e;}));return manifests.get(url);}
 const intersects=(a,b)=>a.west<b.east&&a.east>b.west&&a.south<b.north&&a.north>b.south;
@@ -9,7 +10,7 @@ export class RasterAtlas extends AtlasMap {
     this.sourceId=sourceId;const regional=sourceId?this.pack.regional.find(s=>s.id===sourceId):null;this.layers=sourceId?[regional,...(regional?.details??[])]:this.pack.layers;
     if(!this.layers?.length||this.layers.some(s=>!s))throw new Error('This map is not present in the campaign map pack.');
     this.image={width:sourceId?this.layers[0].width:3600,height:sourceId?this.layers[0].height:1800};
-    this.data=await loadAtlasData();this.carto={continents:this.pack.continents??[],oceans:this.pack.oceans??[]};
+    this.data=await loadAtlasData();this.catalog=atlasCatalog(this.data,this.pack);this.carto={continents:this.pack.continents??[],oceans:this.pack.oceans??[]};
     if(!this.alive)return;
     this.nav?.replaceChildren();for(const place of this.pack.destinations??[]){const b=document.createElement('button');b.type='button';b.textContent=place.name;b.addEventListener('click',()=>this.focus(place.lat,place.lon,place.zoom));this.nav?.append(b);}
     this.host.classList.remove('loading');this.resize();
@@ -19,6 +20,7 @@ export class RasterAtlas extends AtlasMap {
     const fit=Math.min(this.width/this.image.width,this.height/this.image.height);
     if(!this.world){const u=this.center.u,v=1-this.center.v;return Math.max(1,...this.layers.filter(l=>!l.bounds||(u>=l.bounds.west&&u<=l.bounds.east&&v>=l.bounds.south&&v<=l.bounds.north)).map(l=>1.5*l.width/(fit*this.image.width*(l.bounds?l.bounds.east-l.bounds.west:1))));}
     const lon=this.center.u*360-180,lat=90-this.center.v*180;
+    if(this.pack?.resolutionZones){const zones=this.pack.resolutionZones.filter(z=>lon>=z.bounds.west&&lon<=z.bounds.east&&lat>=z.bounds.south&&lat<=z.bounds.north);return Math.max(1,...zones.map(z=>1.5*z.pixelsPerDegree*360/(fit*this.image.width)));}
     const layers=this.layers.filter(l=>lon>=l.bounds.west&&lon<=l.bounds.east&&lat>=l.bounds.south&&lat<=l.bounds.north);
     return Math.max(1,...layers.map(l=>1.5*l.width/(fit*this.image.width*(l.bounds.east-l.bounds.west)/360)));
   }
@@ -38,18 +40,16 @@ export class RasterAtlas extends AtlasMap {
     const desired=dw*Math.min(devicePixelRatio,2);const level=layer.levels.find(l=>l.width>=desired)??layer.levels.at(-1);
     // Draw progressively finer loaded levels; holes retain the preceding resolution.
     for(const l of layer.levels){if(l.width>level.width)break;const cols=Math.ceil(l.width/l.tileSize),rows=Math.ceil(l.height/l.tileSize),x0=Math.max(0,Math.floor(-origin.x/dw*l.width/l.tileSize)),x1=Math.min(cols-1,Math.floor((this.width-origin.x)/dw*l.width/l.tileSize)),y0=Math.max(0,Math.floor(-origin.y/dh*l.height/l.tileSize)),y1=Math.min(rows-1,Math.floor((this.height-origin.y)/dh*l.height/l.tileSize));
-      for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const path=l.template.replace('{x}',x).replace('{y}',y),entry=this.entry(layer.id+'/'+l.width+'/'+x+'/'+y,path);if(!entry.ready)continue;hasPixels=true;const tw=Math.min(l.tileSize,l.width-x*l.tileSize),th=Math.min(l.tileSize,l.height-y*l.tileSize),dx=Math.round((origin.x+x*l.tileSize/l.width*dw)*dpr)/dpr,dy=Math.round((origin.y+y*l.tileSize/l.height*dh)*dpr)/dpr,ex=Math.round((origin.x+(x*l.tileSize+tw)/l.width*dw)*dpr)/dpr,ey=Math.round((origin.y+(y*l.tileSize+th)/l.height*dh)*dpr)/dpr;ctx.clearRect(dx,dy,ex-dx,ey-dy);ctx.drawImage(entry.image,dx,dy,ex-dx,ey-dy);}}
+      for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){if(!tilePresent(l,x,y))continue;const path=l.template.replace('{x}',x).replace('{y}',y),entry=this.entry(layer.id+'/'+l.width+'/'+x+'/'+y,path);if(!entry.ready)continue;hasPixels=true;const tw=Math.min(l.tileSize,l.width-x*l.tileSize),th=Math.min(l.tileSize,l.height-y*l.tileSize),dx=Math.round((origin.x+x*l.tileSize/l.width*dw)*dpr)/dpr,dy=Math.round((origin.y+y*l.tileSize/l.height*dh)*dpr)/dpr,ex=Math.round((origin.x+(x*l.tileSize+tw)/l.width*dw)*dpr)/dpr,ey=Math.round((origin.y+(y*l.tileSize+th)/l.height*dh)*dpr)/dpr;ctx.clearRect(dx,dy,ex-dx,ey-dy);const gutter=l.gutter??0;ctx.drawImage(entry.image,gutter,gutter,tw,th,dx,dy,ex-dx,ey-dy);}}
     ctx.restore();target.save();target.globalAlpha=alpha;target.drawImage(buffer,0,0,this.width,this.height);target.restore();return hasPixels&&alpha>0;
   }
   labels(ctx){
-    const active=this.activeLayers??[],inside=(p,l)=>p.lon>=l.bounds.west&&p.lon<=l.bounds.east&&p.lat>=l.bounds.south&&p.lat<=l.bounds.north;
-    const overrides=active.flatMap((l,i)=>(l.labels??[]).filter(p=>!active.slice(i+1).some(h=>h.replaceLabels&&inside(p,h)))),names=new Set(overrides.map(p=>p.name.toLowerCase()));
-    let places=this.world?[...this.data.places.filter(p=>!names.has(p.name.toLowerCase())&&!active.some(l=>l.replaceLabels&&inside(p,l))),...overrides]:this.layers[0].labels??[];
+    const places=this.world?(this.catalog??=atlasCatalog(this.data,this.pack)):this.layers[0].labels??[];
+    const pixelsPerDegree=this.imageSize().w/360;
     const occupied=this.world?[{x:0,y:0,w:315,h:55},{x:this.width-65,y:0,w:65,h:220},{x:this.width-200,y:this.height-88,w:200,h:88}]:[];if(this.marker){const p=this.screen(this.marker.u,this.marker.v);occupied.push({x:p.x-85,y:p.y-44,w:170,h:25});}this.hits=[];ctx.textBaseline='middle';ctx.textAlign='left';
-    if(this.world&&this.zoom<3)places=[...this.carto.continents.map(p=>({...p,kind:'Continent',minZoom:1})),...this.carto.oceans.map(p=>({...p,kind:'Ocean',minZoom:1}))];
-    for(const p of [...places].sort((a,b)=>(a.rank??3)-(b.rank??3))){if(p.searchOnly||this.zoom<(p.minZoom??(this.world?6:1)))continue;const uv=this.world?mapUV(p.lat,p.lon):{u:p.x/this.image.width,v:p.y/this.image.height},s=this.screen(uv.u,uv.v);if(s.x<8||s.y<45||s.x>this.width-20||s.y>this.height-35)continue;
-      const size=p.kind==='Continent'?21:p.kind==='City'?15:13;ctx.font=`${p.kind==='City'?'bold ':''}${size}px Georgia,serif`;const box={x:s.x+7,y:s.y-size/2-3,w:ctx.measureText(p.name).width+6,h:size+6};if(occupied.some(b=>box.x<b.x+b.w&&box.x+box.w>b.x&&box.y<b.y+b.h&&box.y+box.h>b.y))continue;occupied.push(box);this.hits.push({...box,place:p});
-      if(!['Continent','Ocean','Region','River'].includes(p.kind)){ctx.beginPath();ctx.arc(s.x,s.y,p.kind==='City'?3.4:2.3,0,Math.PI*2);ctx.fillStyle='#302d27';ctx.fill();ctx.lineWidth=1.5;ctx.strokeStyle='#f6efd7';ctx.stroke();}ctx.lineJoin='round';ctx.lineWidth=3;ctx.strokeStyle='#f2e8cedd';ctx.strokeText(p.name,box.x,s.y);ctx.fillStyle='#292e27';ctx.fillText(p.name,box.x,s.y);
+    for(const p of [...places].sort((a,b)=>(a.rank??3)-(b.rank??3))){if(this.world&&!this.pack?.catalog&&(this.activeLayers??[]).some(l=>l.replaceLabels&&p.lon>=l.bounds.west&&p.lon<=l.bounds.east&&p.lat>=l.bounds.south&&p.lat<=l.bounds.north))continue;if(!labelVisible(p,this.zoom,pixelsPerDegree))continue;const uv=this.world?mapUV(p.lat,p.lon):{u:p.x/this.image.width,v:p.y/this.image.height},s=this.screen(uv.u,uv.v);if(s.x<8||s.y<45||s.x>this.width-20||s.y>this.height-35)continue;
+      const appearance=labelAppearance(p),{size}=appearance;ctx.font=appearance.font;const box={x:s.x+7,y:s.y-size/2-3,w:ctx.measureText(p.name).width+6,h:size+6};if(occupied.some(b=>box.x<b.x+b.w&&box.x+box.w>b.x&&box.y<b.y+b.h&&box.y+box.h>b.y))continue;occupied.push(box);this.hits.push({...box,place:p});
+      if(appearance.dot){ctx.beginPath();ctx.arc(s.x,s.y,p.kind==='City'?3.4:2.3,0,Math.PI*2);ctx.fillStyle='#302d27';ctx.fill();ctx.lineWidth=1.5;ctx.strokeStyle='#f6efd7';ctx.stroke();}ctx.lineJoin='round';ctx.lineWidth=3;ctx.strokeStyle='#f2e8cedd';ctx.strokeText(p.name,box.x,s.y);ctx.fillStyle=appearance.color;ctx.fillText(p.name,box.x,s.y);
     }
   }
   select(place){if(this.world){if(!place.bounds)this.focus(place.lat,place.lon,Math.max(this.zoom,Math.min(300,(place.minZoom??12)*2),place.kind==='City'?75:18));return super.select(place);}this.center={u:place.x/this.image.width,v:place.y/this.image.height};this.zoom=Math.max(this.zoom,4);this.draw();}
@@ -59,6 +59,6 @@ export class RasterAtlas extends AtlasMap {
     this.labels(ctx);if(this.world)this.decoration(ctx,this.imageSize(),this.screen(0,0));
     if(this.marker){const p=this.screen(this.marker.u,this.marker.v);ctx.save();ctx.fillStyle='#ffe2a0';ctx.strokeStyle='#342d24';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(p.x-7,p.y-12);ctx.arc(p.x,p.y-14,7,Math.PI,0);ctx.closePath();ctx.fill();ctx.stroke();ctx.font='bold 13px Georgia';ctx.textAlign='center';ctx.lineWidth=4;ctx.strokeStyle='#183844';ctx.strokeText(this.marker.label??'The Party',p.x,p.y-32);ctx.fillText(this.marker.label??'The Party',p.x,p.y-32);ctx.restore();}
     const current=this.activeLayers.at(-1);ctx.fillStyle='#18323ddc';ctx.fillRect(10,h-29,Math.min(w-210,440),21);ctx.fillStyle='#eee2c8';ctx.font='10px Georgia';ctx.textAlign='left';ctx.fillText(current?.credit??'Loading Map Tiles…',18,h-15);
-    if(this.tiles.size>180){for(const [key,e] of [...this.tiles].sort((a,b)=>a[1].used-b[1].used).slice(0,this.tiles.size-180)){e.image.onload=null;e.image.onerror=null;this.tiles.delete(key);}}
+    if(this.tiles.size>360){for(const [key,e] of [...this.tiles].sort((a,b)=>a[1].used-b[1].used).slice(0,this.tiles.size-360)){e.image.onload=null;e.image.onerror=null;this.tiles.delete(key);}}
   }
 }
