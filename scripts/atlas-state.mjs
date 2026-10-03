@@ -1,7 +1,14 @@
 import {ID,mod} from './model.mjs';
 import {PLANETS} from './planets.mjs';
+import {regionalWorldPoint} from './atlas-georef.mjs';
 export const ATLAS_DEFAULT={party:null,regional:{sceneUuid:'',tokenUuid:'',marker:null},mapSource:'modules/realms-almanac/assets/toril/surface.webp'};
-export const atlasState=()=>game.settings.get(ID,'atlas');
+export function atlasState(){
+  const state=game.settings.get(ID,'atlas'),link=state.regional;if(!link?.calibration)return state;
+  const token=link.tokenUuid?globalThis.fromUuidSync?.(link.tokenUuid):null,marker=token?.parent?tokenMapUV(token.parent,token):link.marker;
+  const point=regionalWorldPoint(link,marker);if(!point)return state;
+  let nearest=null,distance=.08;for(const place of link.calibration.labels??[]){if(place.kind&&place.kind!=='City')continue;const d=Math.hypot((place.lon-point.lon)*Math.cos(point.lat*Math.PI/180),place.lat-point.lat);if(d<distance){distance=d;nearest=place;}}
+  return {...state,party:{...state.party,...point,label:state.party?.label??'The Party',location:nearest?.name??link.calibration.name??''}};
+}
 export function registerAtlasSettings(){if(!game.settings.settings.has(`${ID}.atlas`))game.settings.register(ID,'atlas',{scope:'world',config:false,type:Object,default:ATLAS_DEFAULT,onChange:()=>ui.realmsAlmanac?.atlasApp?.refreshState().catch(e=>console.error(ID,e))});}
 export async function saveAtlas(patch){if(!game.user.isGM)throw new Error('Only a GM can change the party location or map link.');const next=foundry.utils.mergeObject(foundry.utils.deepClone(atlasState()),patch,{inplace:false});await game.settings.set(ID,'atlas',next);return next;}
 export function mapUV(lat,lon){return {u:mod(lon+180,360)/360,v:(90-Math.max(-90,Math.min(90,lat)))/180};}

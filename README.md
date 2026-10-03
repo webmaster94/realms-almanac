@@ -32,11 +32,13 @@ The planet-ring button opens a 3D star map centered on Amaunator. Click a world 
 
 The Tears of Selune and Rock of Bral can be selected from the star map. **Toril & Moons** isolates the lunar system. The Tears trail Selune around Toril, and Bral occupies an authored slot among them. Bral's close-up includes its city, docks, Lake Bral, Starhaven and underside farms; the layout is an original interpretation.
 
-Toril uses an attributed GIS-derived surface, elevation and geography. The World Map tab supports panning, zooming, settlement/region search and GM party placement. The illustrated atlas uses shaded terrain at world scale, 128 detail tiles, and textured vector cartography at regional scale. Original painted mountain and forest symbols follow the elevation and land-cover data. City and region labels change with zoom; clicking a name or continent shortcut opens that area. Coastlines and rivers remain sharp at close zooms. The dataset includes 1,024 named settlements.
+Toril uses an attributed GIS-derived surface, elevation and geography. The World Map supports panning, zooming, place search and GM party placement. Campaign map packs can add registered raster layers with several resolutions. The atlas loads visible tiles, retains a coarser image while detail arrives, and fades between map scales. Labels remain readable as the map zooms.
+
+The current private campaign pack includes a painted Faerûn mosaic, the detailed Sword Coast map, the official Icewind Dale player map and the cleaned Thay map. Generated terrain follows registered geographic guides in areas without detailed source art. These images are separate campaign assets, not part of the public module download. The Sword Coast retains its original printed labels. Thay and Icewind Dale use separate labels and measured settlement anchors.
 
 The first click on Regional Map opens a Scene UUID form with a scene-browser button. It never chooses a campaign scene automatically. Link a world scene and optionally follow an existing token as the party marker. A regional atlas marker can also be placed without moving any scene token. Open Scene views the linked scene for the current user; it does not activate it for everyone.
 
-World/globe coordinates and regional scene coordinates are separate. The world marker is an editable geographic anchor; the regional view follows the linked token's actual position. The module does not silently pretend an arbitrary scene image is georeferenced.
+A calibrated regional map drives the world and globe party marker from the linked token or atlas marker. Placing the party on the world map moves that same regional marker when the chosen point is inside its calibrated coverage. Uncalibrated scene images keep a separate world anchor. Linking a different scene clears the preceding map calibration.
 
 The globe's starting orbital alignments remain approximate. Diagram distances and sizes are compressed; terrain relief is exaggerated for inspection. Regional scene images stay in the user's installation and are not copied into releases.
 
@@ -65,3 +67,5 @@ Original code and procedural planetary artwork are MIT licensed. Three.js retain
 The nebula background was generated with the built-in image tool. Its prompt and saved asset are recorded in [art notes](docs/atlas-art.md). Official and fan maps were inspected as references; their images are not bundled.
 
 Rebuild the illustrated atlas with `npm run build:cartography`. Its offline build requires Pillow, NumPy, SciPy, Shapely and ContourPy. The generated assets ship with the module, so players need no Python dependencies.
+
+Private raster packs are built with `tools/build-raster-pack.py`. It keeps source art and generated tiles under the ignored `qa` directory. See [raster pack format and calibration](docs/raster-packs.md) for setup and accuracy limits.

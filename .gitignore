@@ -2,3 +2,6 @@ dist/
 node_modules/
 *.zip
 qa/
+
+__pycache__/
+*.pyc
