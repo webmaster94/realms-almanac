@@ -1,6 +1,8 @@
 import * as T from './vendor/three.mjs';
+import {ORBIT_SPREAD} from './atlas-scale.mjs';
 
-export const SPHERE_RADIUS=650;
+const SHELL_RADIUS=650;
+export const SPHERE_RADIUS=SHELL_RADIUS*ORBIT_SPREAD;
 // Illustrative temporary passages, not a canonical navigation chart.
 export const PASSAGES=[[-.63,.35,-.69,.085],[.62,.44,-.65,.095],[.1,-.63,-.77,.075],[-.92,-.22,-.32,.065],[.9,.38,.2,.07]].map(([x,y,z,size])=>({normal:new T.Vector3(x,y,z).normalize(),size}));
 const vertex=`varying vec3 localPoint;varying vec3 worldPoint;void main(){localPoint=position;worldPoint=(modelMatrix*vec4(position,1.)).xyz;gl_Position=projectionMatrix*viewMatrix*vec4(worldPoint,1.);}`;
@@ -20,7 +22,7 @@ function inscriptionTexture(){
 export class CrystalSphere {
   constructor(scene){
     this.alive=true;
-    this.group=new T.Group();this.group.name='Toril Crystal Sphere';scene.add(this.group);
+    this.group=new T.Group();this.group.name='Toril Crystal Sphere';this.group.scale.setScalar(ORBIT_SPREAD);scene.add(this.group);
     this.view={value:new T.Vector3(0,.46,.888).normalize()};this.cutaway={value:1};this.time={value:0};
     const portals=PASSAGES.map(p=>new T.Vector4(p.normal.x,p.normal.y,p.normal.z,Math.cos(p.size)));
     this.inscriptions=inscriptionTexture();
@@ -36,14 +38,14 @@ export class CrystalSphere {
         if(cutaway>.5)color+=vec3(.3,.42,.5)*(1.-smoothstep(.0,.012,.24-facing));
         gl_FragColor=vec4(color,1.);
       }`});
-    this.shell=new T.Mesh(new T.SphereGeometry(SPHERE_RADIUS,160,96),this.shellMaterial);this.group.add(this.shell);
-    this.volumeMaterial=new T.ShaderMaterial({side:T.BackSide,transparent:true,depthWrite:false,uniforms:{viewDir:this.view,cutaway:this.cutaway,time:this.time,flowMap:{value:null}},vertexShader:vertex,fragmentShader:`
-      uniform vec3 viewDir;uniform float cutaway;uniform float time;uniform sampler2D flowMap;varying vec3 worldPoint;${noise}
-      void main(){vec3 ro=cameraPosition,rd=normalize(worldPoint-ro);float b=dot(ro,rd),c=dot(ro,ro)-960.*960.,disc=b*b-c;if(disc<0.)discard;float start=max(0.,-b-sqrt(disc)),end=-b+sqrt(disc);float stepSize=(end-start)/16.;vec4 sum=vec4(0.);
+    this.shell=new T.Mesh(new T.SphereGeometry(SHELL_RADIUS,160,96),this.shellMaterial);this.group.add(this.shell);
+    this.volumeMaterial=new T.ShaderMaterial({side:T.BackSide,transparent:true,depthWrite:false,uniforms:{viewDir:this.view,cutaway:this.cutaway,time:this.time,sceneScale:{value:ORBIT_SPREAD},flowMap:{value:null}},vertexShader:vertex,fragmentShader:`
+      uniform vec3 viewDir;uniform float cutaway;uniform float time;uniform float sceneScale;uniform sampler2D flowMap;varying vec3 worldPoint;${noise}
+      void main(){vec3 ro=cameraPosition/sceneScale,rd=normalize(worldPoint/sceneScale-ro);float b=dot(ro,rd),c=dot(ro,ro)-960.*960.,disc=b*b-c;if(disc<0.)discard;float start=max(0.,-b-sqrt(disc)),end=-b+sqrt(disc);float stepSize=(end-start)/16.;vec4 sum=vec4(0.);
         float jitter=hash(vec3(gl_FragCoord.xy,3.));
         for(int i=0;i<16;i++){float t=start+(float(i)+jitter)*stepSize;vec3 p=ro+rd*t;float radius=length(p);if(radius<655.||radius>950.)continue;
           vec3 n=p/radius;if(cutaway>.5&&dot(n,viewDir)>.1&&length(p-viewDir*dot(p,viewDir))<680.)continue;
-          vec3 q=p*.003;float slow=time*.012;vec3 warp=vec3(fbm(q*1.8+slow),fbm(q*1.8+8.-slow),fbm(q*1.8+17.));float f=fbm(q*3.4+warp*2.3+vec3(slow,0.,-slow));
+          vec3 q=p*.003;float slow=time*.12;vec3 warp=vec3(fbm(q*1.8+slow),fbm(q*1.8+8.-slow),fbm(q*1.8+17.));float f=fbm(q*3.4+warp*2.3+vec3(slow,0.,-slow));
           vec3 blend=abs(n);blend/=blend.x+blend.y+blend.z;vec3 tc=p*.00048+vec3(.5)+vec3(slow*.01,0.,-slow*.008);vec3 art=texture2D(flowMap,tc.xy).rgb*blend.z+texture2D(flowMap,tc.yz).rgb*blend.x+texture2D(flowMap,tc.zx).rgb*blend.y;float light=dot(art,vec3(.25,.5,.25));
           float stream=sin(q.y*4.+q.x*1.4+warp.x*6.+slow)*.5+.5;float density=smoothstep(.03,.6,light)*(.25+.75*f)*(.5+.5*stream);density*=smoothstep(655.,690.,radius)*(1.-smoothstep(880.,950.,radius));
           float a=1.-exp(-density*stepSize*.025);vec3 col=art*(.7+f*.8)+vec3(.05,.07,.1)*pow(f,4.);
@@ -55,15 +57,15 @@ export class CrystalSphere {
     for(let i=0;i<5;i++){
       const material=new T.ShaderMaterial({side:T.BackSide,transparent:true,depthWrite:false,uniforms:{flowMap:{value:null},time:this.time,phase:{value:i*.73},cutaway:this.cutaway},vertexShader:vertex,fragmentShader:`
         uniform sampler2D flowMap;uniform float time;uniform float phase;uniform float cutaway;varying vec3 localPoint;varying vec3 worldPoint;${noise}
-        void main(){vec3 n=normalize(localPoint);vec2 uv=vec2(atan(n.z,n.x)/6.28318+.5,asin(n.y)/3.14159+.5);uv*=mix(5.,1.,cutaway);uv.x+=phase*.21+time*.00025;uv.y+=sin(uv.x*8.+phase+time*.004)*.015;
+        void main(){vec3 n=normalize(localPoint);vec2 uv=vec2(atan(n.z,n.x)/6.28318+.5,asin(n.y)/3.14159+.5);uv*=mix(5.,1.,cutaway);uv.x+=phase*.21+time*.006;uv.y+=sin(uv.x*8.+phase+time*.23)*.025;uv+=vec2(fbm(n*4.+phase+time*.07),fbm(n*4.+phase+11.-time*.055))*.035;
           vec3 art=texture2D(flowMap,uv).rgb;float lum=dot(art,vec3(.25,.5,.25));float edge=abs(dot(normalize(worldPoint),normalize(cameraPosition-worldPoint)));float alpha=smoothstep(.008,.22,lum)*smoothstep(.02,.28,edge)*(.28+.15*fbm(n*12.+phase));
           gl_FragColor=vec4(art*2.1,alpha);
         }`});
       const layer=new T.Mesh(new T.SphereGeometry(1040-i*82,80,48),material);layer.rotation.set(i*.21,i*.47,i*.13);layer.renderOrder=i+5;this.group.add(layer);this.cloudMaterials.push(material);this.cloudLayers.push(layer);
     }
     this.ready=new T.TextureLoader().loadAsync('modules/realms-almanac/assets/atlas/phlogiston.png').then(texture=>{if(!this.alive){texture.dispose();return;}texture.colorSpace=T.SRGBColorSpace;texture.wrapS=texture.wrapT=T.RepeatWrapping;this.flowTexture=texture;this.volumeMaterial.uniforms.flowMap.value=texture;for(const m of this.cloudMaterials)m.uniforms.flowMap.value=texture;});
-    this.portals=PASSAGES.map((p,i)=>{const group=new T.Group();group.position.copy(p.normal).multiplyScalar(SPHERE_RADIUS);group.quaternion.setFromUnitVectors(new T.Vector3(0,0,1),p.normal);group.userData.passage=i;
-      const r=Math.sin(p.size)*SPHERE_RADIUS;const lip=new T.Mesh(new T.TorusGeometry(r,2.2,10,96),new T.MeshBasicMaterial({color:0x2f475c}));lip.userData.passage=i;group.add(lip);
+    this.portals=PASSAGES.map((p,i)=>{const group=new T.Group();group.position.copy(p.normal).multiplyScalar(SHELL_RADIUS);group.quaternion.setFromUnitVectors(new T.Vector3(0,0,1),p.normal);group.userData.passage=i;
+      const r=Math.sin(p.size)*SHELL_RADIUS;const lip=new T.Mesh(new T.TorusGeometry(r,2.2,10,96),new T.MeshBasicMaterial({color:0x2f475c}));lip.userData.passage=i;group.add(lip);
       const halo=new T.Mesh(new T.TorusGeometry(r+2.8,.85,8,96),new T.MeshBasicMaterial({color:0x8dcecf,transparent:true,opacity:.48}));group.add(halo);
       const hitArea=new T.Mesh(new T.CircleGeometry(r,48),new T.MeshBasicMaterial({transparent:true,opacity:0,depthWrite:false,side:T.DoubleSide}));hitArea.userData.passage=i;group.add(hitArea);
       this.group.add(group);return group;});
@@ -72,6 +74,6 @@ export class CrystalSphere {
     const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(pos,3));geo.setAttribute('pointSize',new T.Float32BufferAttribute(sizes,1));
     this.stars=new T.Points(geo,new T.ShaderMaterial({transparent:true,depthWrite:false,blending:T.AdditiveBlending,uniforms:{viewDir:this.view,cutaway:this.cutaway},vertexShader:`attribute float pointSize;varying vec3 direction;void main(){direction=normalize(position);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);gl_PointSize=pointSize;}`,fragmentShader:`uniform vec3 viewDir;uniform float cutaway;varying vec3 direction;void main(){if(cutaway>.5&&dot(direction,viewDir)>.24)discard;float d=length(gl_PointCoord-.5)*2.;gl_FragColor=vec4(.7,.82,1.,pow(max(0.,1.-d),2.));}`}));this.group.add(this.stars);
   }
-  update(camera,time,cutaway=true){this.view.value.copy(camera.position).normalize();this.cutaway.value=cutaway?1:0;this.time.value=matchMedia('(prefers-reduced-motion: reduce)').matches?0:time;for(let i=0;i<this.portals.length;i++)this.portals[i].visible=!cutaway||PASSAGES[i].normal.dot(this.view.value)<=.24;}
+  update(camera,time,cutaway=true){this.view.value.copy(camera.position).normalize();this.cutaway.value=cutaway?1:0;this.time.value=matchMedia('(prefers-reduced-motion: reduce)').matches?0:time;for(let i=0;i<this.cloudLayers.length;i++)this.cloudLayers[i].rotation.y=i*.47+this.time.value*(.002+i*.0005);for(let i=0;i<this.portals.length;i++)this.portals[i].visible=!cutaway||PASSAGES[i].normal.dot(this.view.value)<=.24;}
   dispose(){this.alive=false;this.flowTexture?.dispose();this.inscriptions?.dispose();}
 }

@@ -51,11 +51,11 @@ for z in range(10):
     levels.append(dict(width=width,height=height,tileSize=512,gutter=1,template=template,coverage=[[x0,y0,x1,y1]]))
     print('world',z,(x1-x0+1)*(y1-y0+1),'tiles',flush=True)
 render(wb,(1024,512)).save(OUT/'world-preview.webp',quality=92)
-# Regional view retains the original decoded pixels, including every printed place.
-native=Image.open(ROOT/'qa/thay.jpg').convert('RGB');native_levels=read(OUT/'manifest.json')['regional'][0]['levels'] if changed else []
+# Regional view retains recovered native terrain; source names are rendered as labels.
+native=Image.open(ROOT/'qa/raster-sources/thay-clean-final.png').convert('RGB');rebuild_native=not changed or '--native' in sys.argv;native_levels=[] if rebuild_native else read(OUT/'manifest.json')['regional'][0]['levels']
 widths=[];width=native.width
 while width>512:widths.append(width);width=math.ceil(width/2)
-for width in ([] if changed else reversed(widths)):
+for width in (reversed(widths) if rebuild_native else []):
     height=round(width*native.height/native.width);im=native.resize((width,height),Image.Resampling.LANCZOS)
     # Edge replication avoids introducing black at the outside of the map frame.
     padded=Image.fromarray(np.pad(np.array(im),((1,1),(1,1),(0,0)),mode='edge'))
@@ -66,10 +66,10 @@ for width in ([] if changed else reversed(widths)):
     native_levels.append(dict(width=width,height=height,tileSize=512,gutter=1,template=template))
     print('native Thay',width,flush=True)
 preview=native.copy();preview.thumbnail((1024,1024));preview.save(OUT/'thay-preview.webp',quality=93)
-old=read(ROOT/'qa/campaign-atlas/manifest-v0.7.json');cal=read(ROOT/'qa/campaign-atlas/thay-calibration.json');cal['labels']=[p for p in cal['labels'] if p.get('kind')=='City']
+old=read(ROOT/'qa/campaign-atlas/manifest-v0.7.json');cal=read(D/'thay-calibration-affine.json')
 catalog=read(D/'catalog.json')
-layer=dict(id='continuous-world',width=262144,height=131072,bounds=wb,preview='world-preview.webp',levels=levels,credit='Toril · Continuous Atlas · Original Thay Map by Rob McCaleb')
-regional=dict(id='thay-original',name='Thay',width=native.width,height=native.height,preview='thay-preview.webp',levels=native_levels,labels=[],calibration=cal,credit='Thay · Original Map by Rob McCaleb')
-manifest=dict(schemaVersion=2,version='0.8.0',layers=[layer],regional=[regional],catalog=catalog,continents=old['continents'],oceans=old['oceans'],destinations=old['destinations'],resolutionZones=[dict(bounds=wb,pixelsPerDegree=sources[0].image.width/360),dict(bounds=fb,pixelsPerDegree=plan['width']/(fb['east']-fb['west'])),dict(bounds=tb,pixelsPerDegree=sources[2].image.width/(tb['east']-tb['west']))],provenance=dict(originalThaySha256=hashlib.sha256((ROOT/'qa/thay.jpg').read_bytes()).hexdigest(),mosaicSha256=hashlib.sha256((D/'faerun-final.png').read_bytes()).hexdigest(),labelCatalog='Reviewed GIS geometry, registered source text, and measured settlement markers',worldGrid='One equirectangular grid at every resolution; all tiles sample the same composite'))
+layer=dict(id='continuous-world',width=262144,height=131072,bounds=wb,preview='world-preview.webp',levels=levels,credit='Toril · Continuous Atlas · Thay Terrain by Rob McCaleb')
+regional=dict(id='thay-clean',name='Thay',width=native.width,height=native.height,preview='thay-preview.webp',levels=native_levels,labels=read(D/'thay-native-labels.json'),calibration=cal,credit='Thay · Rob McCaleb · Source Terrain and Labels')
+manifest=dict(schemaVersion=2,version='0.9.0',layers=[layer],regional=[regional],catalog=catalog,continents=old['continents'],oceans=old['oceans'],destinations=old['destinations'],resolutionZones=[dict(bounds=wb,pixelsPerDegree=sources[0].image.width/360),dict(bounds=fb,pixelsPerDegree=plan['width']/(fb['east']-fb['west'])),dict(bounds=tb,pixelsPerDegree=sources[2].image.width/(tb['east']-tb['west']))],provenance=dict(originalThaySha256=hashlib.sha256((ROOT/'qa/thay.jpg').read_bytes()).hexdigest(),cleanThaySha256=hashlib.sha256((ROOT/'qa/raster-sources/thay-clean-final.png').read_bytes()).hexdigest(),thayRegistration='Single source affine; native PDF labels rendered separately',mosaicSha256=hashlib.sha256((D/'faerun-final.png').read_bytes()).hexdigest(),labelCatalog='Reviewed GIS geometry, registered source text, and measured settlement markers',worldGrid='One equirectangular grid at every resolution; all tiles sample the same composite'))
 (OUT/'manifest.json').write_text(json.dumps(manifest,ensure_ascii=False,separators=(',',':')),encoding='utf-8')
 print(json.dumps({'files':len(list(OUT.iterdir())),'megabytes':sum(p.stat().st_size for p in OUT.iterdir())/1e6,'labels':len(catalog)}))

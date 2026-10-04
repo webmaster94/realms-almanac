@@ -71,7 +71,7 @@ Image.fromarray(canvas).save(D/'faerun-stitched.png',compress_level=2)
 B=plan['bounds'];tb=json.loads((D/'thay-world-bounds.json').read_text());ppd=W/(B['east']-B['west'])
 x0=round((tb['west']-B['west'])*ppd);y0=round((B['north']-tb['north'])*ppd)
 w=round((tb['east']-tb['west'])*ppd);h=round((tb['north']-tb['south'])*ppd)
-t=np.array(Image.open(D/'thay-original-world.png').resize((w,h),Image.Resampling.LANCZOS))
+t=np.array(Image.open(D/'thay-clean-world.png').resize((w,h),Image.Resampling.LANCZOS))
 pad=320;xx=max(0,x0-pad);yy=max(0,y0-pad);rw=min(W,x0+w+pad)-xx;rh=min(H,y0+h+pad)-yy
 original=np.zeros((rh,rw,4),np.uint8);original[y0-yy:y0-yy+h,x0-xx:x0-xx+w]=t
 region=canvas[yy:yy+rh,xx:xx+rw];alpha=original[:,:,3].astype(np.float32)/255;protected=alpha>.95

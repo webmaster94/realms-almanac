@@ -4,6 +4,9 @@
 .ra-atlas-nav a {white-space:nowrap;}
 .ra-atlas-date {margin-left:auto;font-size:11px;color:var(--color-text-secondary);white-space:nowrap;}
 .ra-atlas-tools {display:flex;align-items:center;flex-wrap:wrap;gap:7px;padding:8px 12px;flex:none;border-bottom:1px solid var(--color-border-light-tertiary);}
+.ra-atlas-navigation {display:flex;align-items:center;flex-wrap:wrap;gap:7px;padding:8px 12px;flex:none;border-bottom:1px solid var(--color-border-light-tertiary);background:var(--color-cool-5,#0b1120);}
+.ra-atlas-navigation button {width:auto;font-size:11px;height:27px;padding:0 8px;white-space:nowrap;}
+.ra-atlas-tools:not(:has(button:not([hidden]))) {display:none;}
 .ra-atlas-tools button {width:auto;font-size:11px;height:27px;padding:0 8px;white-space:nowrap;}
 .ra-atlas-tools button[aria-pressed=true] {outline:1px solid var(--color-border-highlight);background:var(--color-bg-option);}
 .ra-atlas-status {font-size:11px;color:var(--color-text-secondary);}
@@ -29,7 +32,7 @@
 .ra-atlas-error {padding:30px;color:#efc39d;}
 .ra-orbit-labels {position:absolute;inset:0;pointer-events:none;overflow:hidden;}
 .ra-orbit-labels[hidden] {display:none;}
-.ra-orbit-label {position:absolute;transform:translate(-50%,-100%);pointer-events:auto;width:auto;height:auto;min-height:18px;border:0;background:#07101e99;color:#d6d5cc;padding:2px 6px;font:11px var(--font-serif,Georgia,serif);text-shadow:0 1px 2px #000;white-space:nowrap;}
+.ra-orbit-label {position:absolute;transform:translate(-50%,-100%);transition:color .15s,background-color .15s;pointer-events:auto;width:auto;height:auto;min-height:18px;border:0;background:#07101e99;color:#d6d5cc;padding:2px 6px;font:11px var(--font-serif,Georgia,serif);text-shadow:0 1px 2px #000;white-space:nowrap;}
 .ra-orbit-label[data-body=amaunator] {color:#ffe1a0;letter-spacing:.1em;font-size:13px;}
 .ra-orbit-label:hover {color:white;background:#304054cc;}
 .ra-orbit-label[hidden] {display:none;}
@@ -41,6 +44,15 @@
 .ra-map-controls {position:absolute;right:16px;top:16px;display:flex;flex-direction:column;gap:1px;z-index:2;border:1px solid #c6b99177;border-radius:4px;overflow:hidden;box-shadow:0 2px 12px #0005;}
 .ra-map-controls button {width:30px;height:29px;background:#153443e8;color:#eddfb7;border:0;border-radius:0;font:20px Georgia;}
 .ra-map-controls button:hover {background:#41616c;}
+.ra-map-utilities {position:absolute;right:55px;top:16px;display:flex;flex-direction:column;gap:4px;z-index:4;}
+.ra-map-utilities button {width:31px;height:30px;padding:0;background:#153443ed;color:#eddfb7;border:1px solid #c6b99177;box-shadow:0 2px 8px #0004;}
+.ra-map-utilities button[aria-pressed=true],.ra-map-utilities button[aria-expanded=true] {background:#426673;outline:1px solid #e6c774;}
+.ra-map-filters {position:absolute;right:96px;top:11px;z-index:5;min-width:195px;margin:0;padding:9px 12px 12px;border:1px solid var(--color-border-light-tertiary,#a8b09a);border-radius:5px;background:var(--color-cool-5,#0b1120);color:var(--color-text-primary,#e9e0c9);box-shadow:0 5px 20px #0007;}
+.ra-map-filters[hidden] {display:none;}
+.ra-map-filters legend {font:14px var(--font-serif,Georgia,serif);padding:0 5px;}
+.ra-map-filters label {display:flex;align-items:center;gap:8px;min-height:29px;font-size:12px;white-space:nowrap;}
+.ra-map-filters input[type=checkbox] {margin:0;flex:none;}
+.ra-atlas .ra-orbit-label {transition-property:color,background-color;transition-duration:.15s;}
 .ra-map-continents {position:absolute;bottom:12px;left:50%;transform:translateX(-50%);display:flex;gap:2px;max-width:58%;padding:3px;background:#153443ed;border:1px solid #b4b08a55;border-radius:4px;overflow-x:auto;box-shadow:0 3px 14px #0004;}
 .ra-map-continents button {border:0;background:none;color:#e8ddbe;width:auto;white-space:nowrap;font:11px Georgia;padding:4px 8px;height:25px;}
 .ra-map-continents button:hover {background:#a3b7a52a;}

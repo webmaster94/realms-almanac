@@ -2,6 +2,8 @@
 
 Checked 3 October 2026 against the local pinned Toril GIS snapshot `2026-09-24_1` and the original `qa/thay.jpg`.
 
+Follow-up on 4 October: the full pinned publisher manifest includes ocean and marine layers omitted from the original local five-layer import. Those layers have now been downloaded and audited in [political atlas research](political-atlas-research.md), including a Lake of Steam water polygon. The coverage limits below describe the original imported subset, not every layer available from the publisher.
+
 `qa/continuous-atlas/geographic-labels.json` contains all 290 usable English geographic labels in the five supplied polygon/line layers. No settlements were added or inferred. Rebuild with `python -X utf8 qa/continuous-atlas/build-label-catalog.py` from the repository root. The script reads and writes UTF-8 explicitly and uses the existing `qa/pydeps` Shapely installation.
 
 ## Source coverage

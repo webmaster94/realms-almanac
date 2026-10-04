@@ -1,23 +1,40 @@
 import {mapUV,mapLatLon} from './atlas-state.mjs';
+import {AtlasRuler} from './atlas-ruler.mjs';
+import {TORIL_CIRCUMFERENCE_MILES} from './atlas-scale.mjs';
+import {AtlasPolitics,loadPolitics} from './atlas-politics.mjs';
+import {labelGroup} from './atlas-labels.mjs';
+export const ATLAS_FILTERS={borders:true,countries:true,regions:true,water:true,settlements:true,terrain:true,party:true};
 let atlasData,cartographyData;
 export function loadAtlasData(){return atlasData??=fetch('modules/realms-almanac/assets/toril/atlas.json').then(r=>{if(!r.ok)throw new Error('The Toril atlas data could not be loaded.');return r.json();});}
 const cartography=()=>cartographyData??=fetch('modules/realms-almanac/assets/toril/cartography.json').then(r=>{if(!r.ok)throw new Error('The illustrated atlas could not be loaded.');return r.json();});
 const BASE='modules/realms-almanac/assets/toril/';
 export class AtlasMap {
-  constructor(host,{world=false,onPlace}={}){
+  constructor(host,{world=false,onPlace,filters={},onFilters,onMeasure}={}){
     Object.assign(this,{host,world,onPlace,alive:true,center:{u:.5,v:.5},zoom:1,tiles:new Map(),hits:[],tileUse:0});
+    this.filters={...ATLAS_FILTERS,...filters};this.onFilters=onFilters;this.onMeasure=onMeasure;this.ruler=new AtlasRuler();
     this.canvas=document.createElement('canvas');this.canvas.tabIndex=0;this.canvas.setAttribute('aria-label',world?'Illustrated Atlas of Toril':'Linked regional map');host.append(this.canvas);this.ctx=this.canvas.getContext('2d');
     this.canvas.addEventListener('wheel',e=>{e.preventDefault();e.stopPropagation();this.zoomAt(Math.exp(-e.deltaY*.0012),e.offsetX,e.offsetY);},{passive:false});
-    this.canvas.addEventListener('pointerdown',e=>{this.down={x:e.clientX,y:e.clientY,u:this.center.u,v:this.center.v};this.canvas.setPointerCapture(e.pointerId);});
-    this.canvas.addEventListener('pointermove',e=>{if(this.down){const {w,h}=this.imageSize();this.center.u=this.down.u-(e.clientX-this.down.x)/w;this.center.v=this.down.v-(e.clientY-this.down.y)/h;this.constrain();this.draw();}else{const hit=this.hit(e.offsetX,e.offsetY);this.canvas.style.cursor=this.placing?'crosshair':hit?'pointer':'grab';this.canvas.title=hit?.place.name??'';}});
-    this.canvas.addEventListener('pointerup',e=>{if(!this.down)return;const click=Math.hypot(e.clientX-this.down.x,e.clientY-this.down.y)<5;this.down=null;if(!click)return;const p=this.uvAt(e.offsetX,e.offsetY);if(this.placing){if(p.u>=0&&p.u<=1&&p.v>=0&&p.v<=1)this.onPlace(this.world?mapLatLon(p.u,p.v):p);}else{const hit=this.hit(e.offsetX,e.offsetY);if(hit)this.select(hit.place);}});
-    this.canvas.addEventListener('pointercancel',()=>{this.down=null;});
+    this.canvas.addEventListener('pointerdown',e=>{if(e.button!==0)return;this.canvas.focus({preventScroll:true});if(this.world&&(this.rulerMode||e.ctrlKey||e.metaKey)){e.preventDefault();const p=this.measurePoint(e);if(this.ruler.moving&&(e.ctrlKey||e.metaKey))this.ruler.waypoint(p);else this.ruler.start(p);this.measureDrag=true;this.canvas.setPointerCapture(e.pointerId);this.draw();return;}this.down={x:e.clientX,y:e.clientY,u:this.center.u,v:this.center.v};this.canvas.setPointerCapture(e.pointerId);});
+    this.canvas.addEventListener('pointermove',e=>{if(this.world&&this.ruler.moving){this.ruler.move(this.measurePoint(e));this.draw();return;}if(this.down){const {w,h}=this.imageSize();this.center.u=this.down.u-(e.clientX-this.down.x)/w;this.center.v=this.down.v-(e.clientY-this.down.y)/h;this.constrain();this.draw();}else{const hit=this.hit(e.offsetX,e.offsetY);this.canvas.style.cursor=this.placing||this.rulerMode?'crosshair':hit?'pointer':'grab';this.canvas.title=this.rulerMode?'Drag to measure. Ctrl-click adds a waypoint. Right-click removes one. Esc clears.':hit?.place.name??'';}});
+    this.canvas.addEventListener('pointerup',e=>{if(this.measureDrag){this.measureDrag=false;this.ruler.move(this.measurePoint(e));if(!e.ctrlKey&&!e.metaKey)this.ruler.finish();this.draw();return;}if(!this.down)return;const click=Math.hypot(e.clientX-this.down.x,e.clientY-this.down.y)<5;this.down=null;if(!click)return;const p=this.uvAt(e.offsetX,e.offsetY);if(this.placing){if(p.u>=0&&p.u<=1&&p.v>=0&&p.v<=1)this.onPlace(this.world?mapLatLon(p.u,p.v):p);}else{const hit=this.hit(e.offsetX,e.offsetY);if(hit)this.select(hit.place);}});
+    this.canvas.addEventListener('pointercancel',()=>{this.down=null;this.measureDrag=false;this.ruler.finish();});
+    this.canvas.addEventListener('contextmenu',e=>{if(!this.ruler.points.length)return;e.preventDefault();this.ruler.remove();this.draw();});
+    this.canvas.addEventListener('keydown',e=>{if(e.key==='Escape'&&this.ruler.points.length){e.preventDefault();e.stopPropagation();this.ruler.clear();this.draw();}});
     this.canvas.addEventListener('keydown',e=>{if(['+','=','-','ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)){e.preventDefault();if(['-','+','='].includes(e.key))this.zoomAt(e.key==='-'?.8:1.25,this.width/2,this.height/2);else{const s=this.imageSize();this.center.u+=(e.key==='ArrowLeft'?-.08:e.key==='ArrowRight'?.08:0)*this.width/s.w;this.center.v+=(e.key==='ArrowUp'?-.08:e.key==='ArrowDown'?.08:0)*this.height/s.h;this.constrain();this.draw();}}});
     if(world)this.addControls();this.observer=new ResizeObserver(()=>this.resize());this.observer.observe(host);this.resize();
   }
+  measurePoint(event){const uv=this.uvAt(event.offsetX,event.offsetY);return mapLatLon(Math.max(0,Math.min(1,uv.u)),Math.max(0,Math.min(1,uv.v)));}
+  setRuler(value){this.rulerMode=value;this.rulerButton?.setAttribute('aria-pressed',String(value));if(value){this.onMeasure?.();this.setPlacement(false);}else this.ruler.finish();this.canvas.style.cursor=value?'crosshair':'grab';this.draw();}
+  async loadBorders(){if(!this.world)return;try{const data=await loadPolitics();if(this.alive){this.politics=new AtlasPolitics(data);this.draw();}}catch(e){console.warn('Realms Almanac:',e.message);}}
   addControls(){
     const controls=document.createElement('div');controls.className='ra-map-controls';
     for(const [label,text,action]of [['Zoom In','+',()=>this.zoomAt(1.4,this.width/2,this.height/2)],['Zoom Out','−',()=>this.zoomAt(1/1.4,this.width/2,this.height/2)],['World Overview','⌂',()=>this.fit()]]){const b=document.createElement('button');b.type='button';b.textContent=text;b.title=label;b.setAttribute('aria-label',label);b.addEventListener('click',action);controls.append(b);}this.host.append(controls);
+    const utilities=document.createElement('div');utilities.className='ra-map-utilities';
+    this.rulerButton=document.createElement('button');this.rulerButton.type='button';this.rulerButton.innerHTML='<i class="fa-solid fa-ruler"></i>';this.rulerButton.title='Measure Distance';this.rulerButton.setAttribute('aria-label','Measure Distance');this.rulerButton.setAttribute('aria-pressed','false');this.rulerButton.addEventListener('click',()=>this.setRuler(!this.rulerMode));utilities.append(this.rulerButton);
+    const filterButton=document.createElement('button');filterButton.type='button';filterButton.innerHTML='<i class="fa-solid fa-sliders"></i>';filterButton.title='Map Filters';filterButton.setAttribute('aria-label','Map Filters');filterButton.setAttribute('aria-expanded','false');utilities.append(filterButton);this.host.append(utilities);
+    const panel=document.createElement('fieldset');panel.className='ra-map-filters';panel.hidden=true;const legend=document.createElement('legend');legend.textContent='Map Filters';panel.append(legend);
+    for(const [key,name]of Object.entries({borders:'Country Borders',countries:'Country Labels',regions:'Region & Continent Labels',water:'Water Labels',settlements:'Settlement Labels',terrain:'Terrain & Site Labels',party:'Party Marker'})){const label=document.createElement('label'),input=document.createElement('input');input.type='checkbox';input.checked=this.filters[key];input.addEventListener('change',()=>{this.filters[key]=input.checked;this.onFilters?.({...this.filters});this.draw();});label.append(input,document.createTextNode(name));panel.append(label);}
+    filterButton.addEventListener('click',()=>{panel.hidden=!panel.hidden;filterButton.setAttribute('aria-expanded',String(!panel.hidden));});panel.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();panel.hidden=true;filterButton.setAttribute('aria-expanded','false');filterButton.focus();}});this.filterPanel=panel;this.host.append(panel);
     this.info=document.createElement('div');this.info.className='ra-map-location';this.info.hidden=true;this.host.append(this.info);
     this.nav=document.createElement('div');this.nav.className='ra-map-continents';this.nav.setAttribute('aria-label','Map Regions');this.host.append(this.nav);
   }
@@ -32,7 +49,7 @@ export class AtlasMap {
       if(this.illustrated){this.makePatterns();this.symbols=new Image();await new Promise((resolve,reject)=>{this.symbols.onload=resolve;this.symbols.onerror=()=>reject(new Error('Map symbols could not be loaded.'));this.symbols.src='modules/realms-almanac/assets/atlas/terrain-symbols.png';});if(!this.alive)return;}
       this.nav.replaceChildren();for(const place of this.carto?.continents??[]){const b=document.createElement('button');b.type='button';b.textContent=place.name;b.addEventListener('click',()=>this.select({...place,kind:place.name==='Lopango'?'Region':'Continent'}));this.nav.append(b);}
     }
-    this.host.classList.remove('loading');this.draw();
+    this.host.classList.remove('loading');this.draw();void this.loadBorders();
   }
   resize(){const r=this.host.getBoundingClientRect();if(!r.width||!r.height)return;this.width=r.width;this.height=r.height;const dpr=Math.min(devicePixelRatio,2);this.canvas.width=Math.round(r.width*dpr);this.canvas.height=Math.round(r.height*dpr);this.canvas.style.width=`${r.width}px`;this.canvas.style.height=`${r.height}px`;this.ctx.setTransform(dpr,0,0,dpr,0,0);this.constrain();this.draw();}
   imageSize(){if(!this.image)return {w:this.width??1,h:this.height??1};const scale=Math.min(this.width/this.image.width,this.height/this.image.height)*this.zoom;return {w:this.image.width*scale,h:this.image.height*scale};}
@@ -43,7 +60,7 @@ export class AtlasMap {
   fit(){this.center={u:.5,v:.5};this.zoom=1;this.selected=null;if(this.info)this.info.hidden=true;this.draw();}
   focus(lat,lon,zoom=12){this.center=mapUV(lat,lon);this.zoom=Math.max(1,Math.min(64,zoom));this.constrain();this.draw();}
   findMarker(){if(!this.marker)return;this.center={u:this.marker.u,v:this.marker.v};this.zoom=this.world?18:3;this.constrain();this.draw();}
-  setPlacement(value){this.placing=value;this.canvas.classList.toggle('placing',value);}
+  setPlacement(value){this.placing=value;if(value){this.rulerMode=false;this.ruler.finish();this.rulerButton?.setAttribute('aria-pressed','false');}this.canvas.classList.toggle('placing',value);}
   setMarker(marker){this.marker=marker;this.draw();}
   hit(x,y){return this.hits.find(h=>x>=h.x&&x<=h.x+h.w&&y>=h.y&&y<=h.y+h.h);}
   select(place){this.selected=place;if(place.bounds){const b=place.bounds;const z=Math.min(360/(b.east-b.west),180/(b.north-b.south))*.75;this.focus(place.lat,place.lon,Math.max(place.kind==='Continent'?3.2:2,z));}else this.focus(place.lat,place.lon,Math.max(this.zoom,18));if(this.info){this.info.replaceChildren();const name=document.createElement('strong'),kind=document.createElement('small'),close=document.createElement('button');name.textContent=place.name;kind.textContent=place.kind??'Region';close.type='button';close.textContent='×';close.title='Close Place Details';close.addEventListener('click',()=>{this.info.hidden=true;this.selected=null;this.draw();});this.info.append(name,kind,close);this.info.hidden=false;}this.draw();}
@@ -86,7 +103,7 @@ export class AtlasMap {
     const w=this.width,h=this.height,occupied=[{x:0,y:0,w:315,h:55},{x:w-65,y:0,w:65,h:200},{x:w-200,y:h-88,w:200,h:88}];if(this.info&&!this.info.hidden)occupied.push({x:10,y:55,w:250,h:80});this.hits=[];ctx.textBaseline='middle';
     const broad=this.zoom<2.5,prominent=new Set(['Waterdeep','Neverwinter',"Baldur's Gate",'Silverymoon','Calimport','Suzail','Eltabbar','Bezantur','Athkatla','Tyraturos']);
     const items=broad?[...(this.carto?.continents??[]).map(p=>({...p,rank:0,kind:p.name==='Lopango'?'Region':'Continent'})),...(this.carto?.oceans??[]).map(p=>({...p,rank:1,kind:'Ocean'}))]:[...this.data.regions.map(p=>({...p,kind:'Region',priority:p.rank+2})),...this.data.places.filter(p=>this.zoom>=7||p.kind==='City'||prominent.has(p.name)).map(p=>({...p,major:prominent.has(p.name),priority:prominent.has(p.name)?0:p.kind==='City'?1:3}))].sort((a,b)=>(a.priority??0)-(b.priority??0));
-    for(const place of items){const uv=mapUV(place.lat,place.lon),p=this.screen(uv.u,uv.v);if(p.x<16||p.x>w-16||p.y<22||p.y>h-48)continue;
+    for(const place of items){if(this.filters?.[labelGroup(place)]===false)continue;const uv=mapUV(place.lat,place.lon),p=this.screen(uv.u,uv.v);if(p.x<16||p.x>w-16||p.y<22||p.y>h-48)continue;
       const ocean=place.kind==='Ocean',region=place.kind==='Region',large=place.kind==='Continent';if(region&&this.zoom>22)continue;
       const text=large?place.name.toLocaleUpperCase():place.name,size=large?Math.min(23,16+this.zoom*3):ocean?15:region?19:place.major?15:place.kind==='City'?14:12;
       ctx.font=`${ocean||region?'italic ':large||place.kind==='City'||place.major?'bold ':''}${size}px Georgia,serif`;ctx.textAlign=large||ocean||region?'center':'left';const tw=ctx.measureText(text).width;let x=ctx.textAlign==='center'?p.x-tw/2:p.x+7;x=Math.max(12,Math.min(w-tw-16,x));const y=p.y-size/2,box={x:x-3,y:y-3,w:tw+6,h:size+6};
@@ -102,14 +119,15 @@ export class AtlasMap {
     ctx.save();ctx.strokeStyle='#d7c8a580';ctx.lineWidth=1;ctx.strokeRect(Math.max(7,origin.x+7),Math.max(7,origin.y+7),Math.min(w-14,size.w-14),Math.min(h-14,size.h-14));
     // Compass and a latitude-aware approximate distance scale.
     const x=w-37,y=166;ctx.fillStyle='#e9dfbc';ctx.strokeStyle='#294c51';ctx.lineWidth=1.2;ctx.beginPath();ctx.moveTo(x,y-24);ctx.lineTo(x-6,y+12);ctx.lineTo(x,y+5);ctx.lineTo(x+6,y+12);ctx.closePath();ctx.fill();ctx.stroke();ctx.font='bold 12px Georgia';ctx.textAlign='center';ctx.fillText('N',x,y-32);
-    const latitude=90-this.center.v*180,milesPerPixel=24000*Math.cos(latitude*Math.PI/180)/size.w;const target=120*milesPerPixel,power=10**Math.floor(Math.log10(Math.max(.001,target))),distance=[1,2,5,10].map(n=>n*power).filter(n=>n<=target).at(-1)??power,bar=distance/milesPerPixel;
+    const latitude=90-this.center.v*180,milesPerPixel=TORIL_CIRCUMFERENCE_MILES*Math.cos(latitude*Math.PI/180)/size.w;const target=120*milesPerPixel,power=10**Math.floor(Math.log10(Math.max(.001,target))),distance=[1,2,5,10].map(n=>n*power).filter(n=>n<=target).at(-1)??power,bar=distance/milesPerPixel;
     ctx.fillStyle='#102d39cf';ctx.fillRect(w-185,h-74,170,48);ctx.strokeStyle='#e6ddbf';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(w-169,h-41);ctx.lineTo(w-169+bar,h-41);ctx.moveTo(w-169,h-45);ctx.lineTo(w-169,h-37);ctx.moveTo(w-169+bar,h-45);ctx.lineTo(w-169+bar,h-37);ctx.stroke();ctx.font='11px Georgia';ctx.textAlign='left';ctx.fillStyle='#e6ddbf';ctx.fillText(`≈ ${distance.toLocaleString()} miles`,w-169,h-58);ctx.restore();
   }
   draw(){
     if(!this.alive||!this.width)return;const ctx=this.ctx,w=this.width,h=this.height;ctx.clearRect(0,0,w,h);ctx.fillStyle=this.world?'#153447':'#07111c';ctx.fillRect(0,0,w,h);if(!this.image)return;const size=this.imageSize(),origin=this.screen(0,0);ctx.drawImage(this.image,origin.x,origin.y,size.w,size.h);
-    if(this.world&&this.data){this.detailTiles(ctx,size,origin);this.vectorCartography(ctx,size,origin);this.terrainSymbols(ctx);this.labels(ctx);this.decoration(ctx,size,origin);}
+    if(this.world&&this.data){this.detailTiles(ctx,size,origin);this.vectorCartography(ctx,size,origin);this.terrainSymbols(ctx);this.politics?.draw(this,ctx);this.labels(ctx);this.decoration(ctx,size,origin);}
     if(this.selected&&!this.selected.bounds){const uv=mapUV(this.selected.lat,this.selected.lon),p=this.screen(uv.u,uv.v);ctx.strokeStyle='#a34e35';ctx.lineWidth=2;ctx.beginPath();ctx.arc(p.x,p.y,8,0,Math.PI*2);ctx.stroke();}
-    if(this.marker){const p=this.screen(this.marker.u,this.marker.v);ctx.save();ctx.shadowColor='#eeb964';ctx.shadowBlur=12;ctx.fillStyle='#ffe3a0';ctx.strokeStyle='#342d24';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(p.x-7,p.y-12);ctx.arc(p.x,p.y-14,7,Math.PI,0);ctx.closePath();ctx.fill();ctx.stroke();ctx.shadowBlur=0;ctx.font='bold 13px Georgia';ctx.textAlign='center';ctx.strokeStyle='#152c35';ctx.lineWidth=4;const label=this.marker.label??'The Party';ctx.strokeText(label,p.x,p.y-31);ctx.fillText(label,p.x,p.y-31);ctx.restore();}
+    if(this.marker&&this.filters?.party!==false){const p=this.screen(this.marker.u,this.marker.v);ctx.save();ctx.shadowColor='#eeb964';ctx.shadowBlur=12;ctx.fillStyle='#ffe3a0';ctx.strokeStyle='#342d24';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(p.x-7,p.y-12);ctx.arc(p.x,p.y-14,7,Math.PI,0);ctx.closePath();ctx.fill();ctx.stroke();ctx.shadowBlur=0;ctx.font='bold 13px Georgia';ctx.textAlign='center';ctx.strokeStyle='#152c35';ctx.lineWidth=4;const label=this.marker.label??'The Party';ctx.strokeText(label,p.x,p.y-31);ctx.fillText(label,p.x,p.y-31);ctx.restore();}
+    this.ruler?.draw(this,ctx);
     ctx.fillStyle='rgba(10,29,37,.8)';ctx.fillRect(10,h-29,this.world?251:230,21);ctx.fillStyle='#dfd5b5';ctx.font='10px Georgia';ctx.fillText(this.world?'Toril Atlas · Geography by Geospatial Grimoire':'Linked Scene · Original Map',18,h-15);
   }
   dispose(){this.alive=false;cancelAnimationFrame(this.queued);this.observer.disconnect();if(this.loadingImage&&!this.loadingImage.complete)this.loadingImage.src='';for(const e of this.tiles.values()){e.image.onload=null;e.image.onerror=null;}this.tiles.clear();this.host.replaceChildren();this.image=null;}

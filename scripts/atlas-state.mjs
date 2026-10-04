@@ -1,6 +1,7 @@
 import {ID,mod} from './model.mjs';
 import {PLANETS} from './planets.mjs';
 import {regionalWorldPoint} from './atlas-georef.mjs';
+import {ORBIT_SPREAD} from './atlas-scale.mjs';
 export const ATLAS_DEFAULT={party:null,regional:{sceneUuid:'',tokenUuid:'',marker:null},mapSource:'modules/realms-almanac/assets/toril/surface.webp'};
 export function atlasState(){
   const state=game.settings.get(ID,'atlas'),link=state.regional;if(!link?.calibration)return state;
@@ -9,7 +10,7 @@ export function atlasState(){
   let nearest=null,distance=.08;for(const place of link.calibration.labels??[]){if(place.kind&&place.kind!=='City')continue;const d=Math.hypot((place.lon-point.lon)*Math.cos(point.lat*Math.PI/180),place.lat-point.lat);if(d<distance){distance=d;nearest=place;}}
   return {...state,party:{...state.party,...point,label:state.party?.label??'The Party',location:nearest?.name??link.calibration.name??''}};
 }
-export function registerAtlasSettings(){if(!game.settings.settings.has(`${ID}.atlas`))game.settings.register(ID,'atlas',{scope:'world',config:false,type:Object,default:ATLAS_DEFAULT,onChange:()=>ui.realmsAlmanac?.atlasApp?.refreshState().catch(e=>console.error(ID,e))});}
+export function registerAtlasSettings(){if(!game.settings.settings.has(`${ID}.atlasDisplay`))game.settings.register(ID,'atlasDisplay',{scope:'client',config:false,type:Object,default:{borders:true,countries:true,regions:true,water:true,settlements:true,terrain:true,party:true}});if(!game.settings.settings.has(`${ID}.atlas`))game.settings.register(ID,'atlas',{scope:'world',config:false,type:Object,default:ATLAS_DEFAULT,onChange:()=>ui.realmsAlmanac?.atlasApp?.refreshState().catch(e=>console.error(ID,e))});}
 export async function saveAtlas(patch){if(!game.user.isGM)throw new Error('Only a GM can change the party location or map link.');const next=foundry.utils.mergeObject(foundry.utils.deepClone(atlasState()),patch,{inplace:false});await game.settings.set(ID,'atlas',next);return next;}
 export function mapUV(lat,lon){return {u:mod(lon+180,360)/360,v:(90-Math.max(-90,Math.min(90,lat)))/180};}
 export function mapLatLon(u,v){return {lat:90-Math.max(0,Math.min(1,v))*180,lon:mod(u,1)*360-180};}
@@ -19,7 +20,7 @@ export function orbitPositions(days,angles={}) {
   const bodies=[{id:'toril',name:'Toril',radius:200,period:365.25,angle:0,color:'#6aa9cf'},...PLANETS].sort((a,b)=>a.radius-b.radius);
   return bodies.map((p,index)=>{const angle=mod(days/p.period+(angles[p.id]??p.angle)/360,1)*Math.PI*2;
     // Diagram radii keep the inner system navigable. Angular positions and sunlight share this geometry.
-    const orbit=[55,90,135,178,223,315,380,445][index];return {...p,angle,orbit,x:Math.cos(angle)*orbit,z:Math.sin(angle)*orbit};});
+    const orbit=[55,90,135,178,223,315,380,445][index]*ORBIT_SPREAD;return {...p,angle,orbit,x:Math.cos(angle)*orbit,z:Math.sin(angle)*orbit};});
 }
 export function sceneMapSource(scene){return scene?.background?.src??scene?.toObject().levels?.[0]?.background?.src??'';}
 export function tokenMapUV(scene,token){const d=scene.dimensions??scene.getDimensions(),o=scene.toObject(),size=o.grid?.size??100;return {u:(token.x+(token.width??1)*size/2-d.sceneX)/d.sceneWidth,v:(token.y+(token.height??1)*size/2-d.sceneY)/d.sceneHeight};}
