@@ -56,7 +56,7 @@ export class RealmsAlmanac {
     document.body.append(this.root);
     this.root.addEventListener("click", e=>{const target=e.target.closest("[data-action]");if(target)this.action(target.dataset.action,target.dataset.body).catch(notifyError);});
     this.root.addEventListener("change", e=>{if(e.target.name==="interval") game.settings.set(ID,"interval",e.target.value).catch(notifyError);});
-    for(const name of ["updateWorldTime","updateCombat","createCombat","deleteCombat","combatStart","combatEnd","canvasReady","updateScene"]) {
+    for(const name of ["updateWorldTime","updateCombat","createCombat","deleteCombat","createCombatant","updateCombatant","deleteCombatant","renderCombatTracker","combatStart","combatEnd","canvasReady","updateScene"]) {
       const id=Hooks.on(name,()=>this.refresh()); this.hooks.push([name,id]);
     }
     this.hooks.push(['updateSetting',Hooks.on('updateSetting',setting=>{if(setting.key?.startsWith(`${ID}.`))this.refresh();})]);
@@ -70,7 +70,9 @@ export class RealmsAlmanac {
   render(snapshot) {
     const enabled=get("enabled");
     document.body.classList.toggle("ra-replace-bars",enabled);
-    this.root.hidden=!enabled || shouldHideInCombat(get("hideCombat"),game.combat);
+    const combatHidden=shouldHideInCombat(get("hideCombat"),game.combat);
+    this.root.hidden=!enabled || combatHidden;
+    this.atlasApp?.setCombatHidden(combatHidden);
     if(this.root.hidden) return;
     const w=snapshot??readWorld();
     const focused=this.root.contains(document.activeElement)?document.activeElement?.dataset.action ?? document.activeElement?.name:null;

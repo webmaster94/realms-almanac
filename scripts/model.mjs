@@ -82,7 +82,7 @@ export function timeOfDay(hour, dawn = 6, dusk = 18) {
   return hour > dawn && hour < dusk ? "day" : "night";
 }
 export function shouldHideInCombat(enabled, combat) {
-  return Boolean(enabled && combat?.started);
+  return Boolean(enabled && (combat?.started || combat?.combatants?.size > 0));
 }
 export function intervalSeconds(interval, calendar) {
   const d = calendar.days;

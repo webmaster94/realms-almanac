@@ -45,10 +45,13 @@ test('explicit intervals use calendar units, including nonstandard days',()=>{
   calendar.days.hoursPerDay=20;
   assert.equal(intervalSeconds('day',calendar),72000);
 });
-test('combat visibility uses started state, independently of combat modules',()=>{
+test('combat visibility includes initiative setup and respects the visibility option',()=>{
   assert.equal(shouldHideInCombat(true,{started:true}),true);
   assert.equal(shouldHideInCombat(false,{started:true}),false);
   assert.equal(shouldHideInCombat(true,{started:false}),false);
+  assert.equal(shouldHideInCombat(true,{started:false,combatants:new Map([['fighter',{}]])}),true);
+  assert.equal(shouldHideInCombat(false,{started:false,combatants:new Map([['fighter',{}]])}),false);
+  assert.equal(shouldHideInCombat(true,{started:false,combatants:new Map()}),false);
   assert.equal(shouldHideInCombat(true,null),false);
 });
 test('weather classification and displayed strings handle user content',()=>{

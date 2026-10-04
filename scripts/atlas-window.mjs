@@ -1,4 +1,4 @@
-import {ID,escapeHTML as esc} from './model.mjs';
+import {ID,escapeHTML as esc,shouldHideInCombat} from './model.mjs';
 import {PLANETS} from './planets.mjs';
 import {AtlasRenderer} from './atlas-renderer.mjs';
 import {AtlasMap,loadAtlasData} from './atlas-map.mjs';
@@ -43,7 +43,12 @@ export class AtlasWindow extends foundry.applications.api.ApplicationV2 {
       this.hooks.push(['updateToken',Hooks.on('updateToken',t=>{if(t.uuid===atlasState().regional.tokenUuid)this.refreshState();})]);
       this.hooks.push(['updateScene',Hooks.on('updateScene',s=>{if(s.uuid===atlasState().regional.sceneUuid)this.refreshState();})]);
     }
-    this.updateDate();await this.activateView(this.tabGroups.atlas);
+    this.updateDate();this.setCombatHidden(shouldHideInCombat(game.settings.get(ID,'hideCombat'),game.combat));await this.activateView(this.tabGroups.atlas);
+  }
+  setCombatHidden(hidden){
+    this.combatHidden=hidden;this.element?.classList.toggle('ra-combat-hidden',hidden);
+    if(this.space)this.space.visible=!hidden&&this.tabGroups.atlas==='system';
+    if(hidden&&this.placing)this.setPlacement(false);
   }
   showError(host,error){if(!this.alive)return;console.error(ID,error);host.querySelector('.ra-atlas-loading')?.remove();const p=document.createElement('p');p.className='ra-atlas-error';p.textContent=error.message;host.append(p);}
   changeTab(tab,group,options={}){
@@ -52,7 +57,7 @@ export class AtlasWindow extends foundry.applications.api.ApplicationV2 {
     super.changeTab(tab,group,options);return this.activateView(tab).catch(e=>ui.notifications.error(e.message));
   }
   updateDate(){if(!this.element)return;const w=this.read();this.element.querySelector('.ra-atlas-date').textContent=`${w.date.label}, ${w.date.year} · ${w.time}`;}
-  async activateView(tab){if(!this.alive)return;const generation=this.generation;this.setPlacement(false);if(this.space)this.space.visible=tab==='system';this.element.querySelector('[data-tool="scene"]').hidden=tab!=='region';this.element.querySelector('[data-tool="survey"]').hidden=tab!=='system';this.element.querySelector('[data-tool="lunar"]').hidden=tab!=='system';this.element.querySelector('[data-tool="passage"]').hidden=tab!=='system';this.element.querySelector('[data-tool="exterior"]').hidden=tab!=='system';this.element.querySelector('.ra-atlas-footer>span').textContent=tab==='system'?'Drag to orbit · Wheel to zoom · Click a world to explore':tab==='world'?'Drag to pan · Wheel to zoom · Ctrl-drag to measure · Ctrl-click adds a waypoint · Esc clears':'Drag to pan · Wheel to zoom · Set Party Position to place a marker';
+  async activateView(tab){if(!this.alive)return;const generation=this.generation;this.setPlacement(false);if(this.space)this.space.visible=tab==='system'&&!this.combatHidden;this.element.querySelector('[data-tool="scene"]').hidden=tab!=='region';this.element.querySelector('[data-tool="survey"]').hidden=tab!=='system';this.element.querySelector('[data-tool="lunar"]').hidden=tab!=='system';this.element.querySelector('[data-tool="passage"]').hidden=tab!=='system';this.element.querySelector('[data-tool="exterior"]').hidden=tab!=='system';this.element.querySelector('.ra-atlas-footer>span').textContent=tab==='system'?'Drag to orbit · Wheel to zoom · Click a world to explore':tab==='world'?'Drag to pan · Wheel to zoom · Ctrl-drag to measure · Ctrl-click adds a waypoint · Esc clears':'Drag to pan · Wheel to zoom · Set Party Position to place a marker';
     if(tab==='system'){this.space?.resize();return;}
     if(tab==='world'){
       if(!this.worldMap){const state=atlasState();this.worldMap=new (state.rasterManifest?RasterAtlas:AtlasMap)(this.element.querySelector('.ra-world-stage'),{world:true,onPlace:p=>this.placeWorld(p).catch(e=>ui.notifications.error(e.message)),filters:game.settings.get(ID,'atlasDisplay'),onFilters:filters=>game.settings.set(ID,'atlasDisplay',filters).catch(e=>ui.notifications.error(e.message)),onMeasure:()=>this.setPlacement(false)});if(state.rasterManifest)await this.worldMap.loadPack(state.rasterManifest);else await this.worldMap.load(state.mapSource);}
