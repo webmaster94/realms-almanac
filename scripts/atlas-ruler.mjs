@@ -2,9 +2,10 @@ import {TORIL_RADIUS_MILES} from './atlas-scale.mjs';
 import {mapUV} from './atlas-state.mjs';
 const rad=Math.PI/180;
 export function atlasDistance(a,b){
-  const dlat=(b.lat-a.lat)*rad,dlon=(b.lon-a.lon)*rad;
-  const h=Math.sin(dlat/2)**2+Math.cos(a.lat*rad)*Math.cos(b.lat*rad)*Math.sin(dlon/2)**2;
-  return 2*TORIL_RADIUS_MILES*Math.asin(Math.sqrt(Math.max(0,Math.min(1,h))));
+  const aLat=a.lat*rad,bLat=b.lat*rad,dlon=(b.lon-a.lon)*rad;
+  const cross=Math.hypot(Math.cos(bLat)*Math.sin(dlon),Math.cos(aLat)*Math.sin(bLat)-Math.sin(aLat)*Math.cos(bLat)*Math.cos(dlon));
+  const dot=Math.sin(aLat)*Math.sin(bLat)+Math.cos(aLat)*Math.cos(bLat)*Math.cos(dlon);
+  return TORIL_RADIUS_MILES*Math.atan2(cross,dot);
 }
 export function atlasRoute(points){
   const segments=points.slice(1).map((p,i)=>atlasDistance(points[i],p));
@@ -17,7 +18,11 @@ export function greatCircle(a,b){
   return Array.from({length:count+1},(_,i)=>{
     const t=i/count;
     if(angle<1e-7)return {...a};
-    if(Math.abs(Math.sin(angle))<1e-7){const d=((b.lon-a.lon+540)%360)-180;return {lat:a.lat+(b.lat-a.lat)*t,lon:a.lon+d*t};}
+    if(Math.abs(Math.sin(angle))<1e-7){
+      const axis=Math.abs(u[1])<.9?[0,1,0]:[1,0,0],dot=u.reduce((n,x,j)=>n+x*axis[j],0),q=axis.map((x,j)=>x-dot*u[j]),length=Math.hypot(...q);
+      const x=u.map((n,j)=>n*Math.cos(angle*t)+q[j]/length*Math.sin(angle*t));
+      return i===count?{...b}:{lat:Math.atan2(x[1],Math.hypot(x[0],x[2]))/rad,lon:Math.atan2(x[2],x[0])/rad};
+    }
     const x=u.map((n,j)=>(n*Math.sin((1-t)*angle)+v[j]*Math.sin(t*angle))/Math.sin(angle));
     return {lat:Math.atan2(x[1],Math.hypot(x[0],x[2]))/rad,lon:Math.atan2(x[2],x[0])/rad};
   });

@@ -56,3 +56,9 @@ test('partial pack updates retain the same grid while replacing selected tile fi
   const level={template:'../atlas-v0_8/world-7-{x}-{y}.webp',overrides:{'10,20':'world-7-10-20.webp'}};
   assert.equal(tilePath(level,10,20),'world-7-10-20.webp');assert.equal(tilePath(level,11,20),'../atlas-v0_8/world-7-11-20.webp');
 });
+test('a country caption cannot suppress a major sea at country scale',()=>{
+  const water={name:'Sea of Fallen Stars',kind:'Water',lat:36.330566774090784,lon:-51.79487762278285,rank:0,minZoom:3};
+  const nation={name:'Sembia',kind:'Country',lat:37.865157713654554,lon:-53.30434565474122,rank:-2,minZoom:3};
+  const m=mapAt(water,5,[nation,water]);m.width=1380;m.height=522;m.labels(context());
+  assert.ok(m.hits.some(h=>h.place===water));assert.ok(m.hits.some(h=>h.place===nation));
+});

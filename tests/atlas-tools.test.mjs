@@ -25,3 +25,7 @@ test('solar distances expand fourfold with coherent size-class ordering',()=>{
   assert.equal(ORBIT_SPREAD,4);assert.deepEqual(orbitPositions(0).map(p=>p.orbit),[220,360,540,712,892,1260,1520,1780]);
   assert.ok(SYSTEM_RADII.amaunator>SYSTEM_RADII.coliar&&SYSTEM_RADII.coliar>SYSTEM_RADII.chandos&&SYSTEM_RADII.chandos>SYSTEM_RADII.toril&&SYSTEM_RADII.toril>SYSTEM_RADII.karpri&&SYSTEM_RADII.karpri>SYSTEM_RADII.anadia);
 });
+test('an antipodal ruler path follows a great circle rather than a latitude-longitude zigzag',()=>{
+  const a={lat:70,lon:0},b={lat:-70,lon:180},points=greatCircle(a,b);
+  assert.ok(Math.abs(atlasRoute(points).total-atlasDistance(a,b))<1e-6);
+});

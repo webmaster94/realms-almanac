@@ -22,7 +22,7 @@ export function labelPriority(p){
   if(p.kind==='Continent')return -6;
   if(p.kind==='City'&&(p.rank??3)<=0)return -5;
   if(p.kind==='Country')return -4;
-  if(p.kind==='Water'&&(p.rank??3)<=0)return -3;
+  if(p.kind==='Water'&&(p.rank??3)<=0)return -4.5;
   if(p.anchorType==='collective-region-label')return -2;
   return (p.rank??3)+(p.kind==='Terrain'?5:p.kind==='Region'?3:0);
 }
@@ -34,7 +34,9 @@ export function labelVisible(p,zoom,pixelsPerDegree,filters={}){
   return true;
 }
 export function labelCandidates(p,point,width,height){
-  const geographic=!isSettlement(p),water=['Water','Ocean','River'].includes(p.kind),offsets=water||!geographic&&!labelAppearance(p).dot?[[0,0]]:geographic?[[0,0],[0,-height-10],[0,height+10],[-width*.65,0],[width*.65,0],[0,-height*2-18]]:[[7+width/2,0]];
+  const geographic=!isSettlement(p),water=['Water','Ocean','River'].includes(p.kind);let offsets=[[0,0]];
+  if(geographic&&!water)for(let r=8;r<=64;r+=8){const d=r*Math.SQRT1_2;offsets.push([0,-r],[0,r],[-r,0],[r,0],[-d,-d],[d,-d],[-d,d],[d,d]);}
+  else if(!geographic&&labelAppearance(p).dot)offsets=[[7+width/2,0]];
   return offsets.map(([dx,dy])=>({x:point.x+dx-width/2,y:point.y+dy-height/2,w:width,h:height,cx:point.x+dx,cy:point.y+dy}));
 }
 export function labelAppearance(p){
